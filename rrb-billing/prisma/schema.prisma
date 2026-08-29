@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  totpSecret    String?        // For 2FA
+  role          String
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  shifts        ManagerShift[]
+  bills         Bill[]
+  auditLogs     AuditLog[]
+}
+
+model Outlet {
+  id               String         @id @default(uuid())
+  name             String
+  location         String
+  contactInfo      String
+  taxConfiguration String           // e.g., "{ "taxRate": 5, "serviceCharge": 0 }"
+  createdAt        DateTime       @default(now())
+  shifts           ManagerShift[]
+  bills            Bill[]
+}
+
+model ManagerShift {
+  id        String      @id @default(uuid())
+  user      User        @relation(fields: [userId], references: [id])
+  userId    String
+  outlet    Outlet      @relation(fields: [outletId], references: [id])
+  outletId  String
+  startTime DateTime    @default(now())
+  endTime   DateTime?
+  status    String @default("ACTIVE")
+  bills     Bill[]
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  imageUrl  String?
+  isActive  Boolean    @default(true)
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id         String         @id @default(uuid())
+  name       String
+  price      Float        
+  categoryId String?
+  category   Category?      @relation(fields: [categoryId], references: [id])
+  imageUrl   String?
+  isActive   Boolean        @default(true)
+  modifiers  ItemModifier[]
+  billItems  BillItem[]
+}
+
+model ItemModifier {
+  id              String               @id @default(uuid())
+  menuItem        MenuItem             @relation(fields: [menuItemId], references: [id])
+  menuItemId      String
+  name            String
+  priceAdjustment Float              
+  billItems       BillItemModifier[]
+}
+
+model Bill {
+  id             String        @id @default(uuid())
+  billNumber     String        // Needs to be unique per outlet, maybe a compound unique constraint
+  outlet         Outlet        @relation(fields: [outletId], references: [id])
+  outletId       String
+  shift          ManagerShift  @relation(fields: [shiftId], references: [id])
+  shiftId        String
+  creator        User          @relation(fields: [creatorId], references: [id])
+  creatorId      String
+  subtotal       Float       
+  taxAmount      Float       
+  serviceCharge  Float       
+  discount       Float       
+  finalAmount    Float       
+  status         String
+  reason         String?       // For voids/refunds
+  idempotencyKey String        @unique
+  createdAt      DateTime      @default(now())
+  items          BillItem[]
+  payments       Payment[]
+
+  @@unique([outletId, billNumber])
+}
+
+model BillItem {
+  id         String               @id @default(uuid())
+  bill       Bill                 @relation(fields: [billId], references: [id])
+  billId     String
+  menuItem   MenuItem             @relation(fields: [menuItemId], references: [id])
+  menuItemId String
+  quantity   Int
+  unitPrice  Float              
+  subtotal   Float              
+  modifiers  BillItemModifier[]
+}
+
+model BillItemModifier {
+  id             String       @id @default(uuid())
+  billItem       BillItem     @relation(fields: [billItemId], references: [id])
+  billItemId     String
+  modifier       ItemModifier @relation(fields: [modifierId], references: [id])
+  modifierId     String
+  price          Float      
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  bill          Bill          @relation(fields: [billId], references: [id])
+  billId        String
+  amount        Float       
+  method        String
+  status        String
+  transactionId String?
+  createdAt     DateTime      @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  role       String
+  action     String
+  targetType String
+  targetId   String
+  details    String
+  ipAddress  String
+  createdAt  DateTime @default(now())
+}
