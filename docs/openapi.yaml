@@ -1,0 +1,147 @@
+openapi: 3.0.0
+info:
+  title: RRB Billing Application API
+  version: 1.0.0
+  description: API for the RRB Fast Food and Chinese billing application.
+servers:
+  - url: /api
+paths:
+  /auth/login:
+    post:
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  role:
+                    type: string
+  /shift/start:
+    post:
+      summary: Start a manager shift
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outlet_id:
+                  type: string
+      responses:
+        '200':
+          description: Shift started successfully
+  /shift/end:
+    post:
+      summary: End a manager shift
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Shift ended successfully
+  /bills:
+    post:
+      summary: Create a new bill
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outlet_id:
+                  type: string
+                shift_id:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      menu_item_id:
+                        type: string
+                      quantity:
+                        type: integer
+                      modifiers:
+                        type: array
+                        items:
+                          type: string
+                discount:
+                  type: number
+      responses:
+        '201':
+          description: Bill created
+  /bills/{id}/refund:
+    post:
+      summary: Refund or void a bill
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Bill refunded/voided
+  /reports/consolidated:
+    get:
+      summary: Get consolidated reports (Owner only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Consolidated report data
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

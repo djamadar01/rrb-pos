@@ -1,0 +1,49 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./rrb-billing
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: ./rrb-billing
+        run: npx prisma generate
+
+      - name: Build Next.js app
+        working-directory: ./rrb-billing
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run Tests
+        working-directory: ./rrb-billing
+        run: echo "No tests configured yet"
+        
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Deploy to Production
+        run: echo "Deployment script to Vercel/AWS goes here."
