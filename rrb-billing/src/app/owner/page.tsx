@@ -103,7 +103,7 @@ export default function OwnerDashboard() {
           <section className="dashboard-stats">
             <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
               <h3 style={{ color: 'var(--text-secondary)' }}>{t("todayRevenue")}</h3>
-              <p className="stat-value">₹{stats.revenue?.toFixed(2) || "0.00"}</p>
+              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.revenue?.toFixed(2) || "0.00"}</p>
             </div>
             <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
               <h3 style={{ color: 'var(--text-secondary)' }}>{t("totalOrdersToday")}</h3>
@@ -111,11 +111,11 @@ export default function OwnerDashboard() {
             </div>
             <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
               <h3 style={{ color: 'var(--text-secondary)' }}>{t("onlinePayments")}</h3>
-              <p className="stat-value">₹{stats.onlinePayments?.toFixed(2) || "0.00"}</p>
+              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.onlinePayments?.toFixed(2) || "0.00"}</p>
             </div>
             <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
               <h3 style={{ color: 'var(--text-secondary)' }}>{t("cashPayments")}</h3>
-              <p className="stat-value">₹{stats.cashPayments?.toFixed(2) || "0.00"}</p>
+              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.cashPayments?.toFixed(2) || "0.00"}</p>
             </div>
           </section>
           
@@ -135,7 +135,7 @@ export default function OwnerDashboard() {
                 </thead>
                 <tbody>
                   {recentBills.map((bill: any) => (
-                    <tr key={bill.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <tr key={bill.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                       <td style={{ padding: '0.5rem 0' }}>{bill.billNumber}</td>
                       <td>{bill.outlet?.name}</td>
                       <td>{bill.creator?.name}</td>

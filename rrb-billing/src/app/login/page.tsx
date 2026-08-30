@@ -18,81 +18,93 @@ export default function LoginPage() {
           align-items: center;
           justify-content: center;
           min-height: 100vh;
-          background: linear-gradient(135deg, var(--bg-color) 0%, #1a1a2e 100%);
+          background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+          font-family: var(--font-main);
         }
         .login-box {
-          background: rgba(255, 255, 255, 0.05);
-          backdrop-filter: blur(20px);
-          padding: 3rem;
+          background: var(--bg-card);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          padding: 3.5rem;
           border-radius: var(--radius-lg);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--border-color);
           width: 100%;
-          max-width: 400px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-          animation: slideUp 0.6s ease-out forwards;
+          max-width: 420px;
+          box-shadow: var(--shadow-glow);
+          animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .login-box h2 {
           text-align: center;
-          margin-bottom: 2rem;
-          color: white;
-          font-size: 1.8rem;
+          margin-bottom: 2.5rem;
+          color: var(--accent-color);
+          font-family: var(--font-heading);
+          font-size: 2.2rem;
+          font-weight: 600;
+          letter-spacing: 0.5px;
         }
         .input-group {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1.8rem;
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
+          gap: 0.6rem;
         }
         .input-group label {
           color: var(--text-secondary);
-          font-size: 0.9rem;
+          font-size: 0.95rem;
+          font-weight: 500;
         }
         .input-group input {
-          padding: 1rem;
-          border-radius: var(--radius-sm);
-          background: rgba(0, 0, 0, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: white;
+          padding: 1.1rem;
+          border-radius: var(--radius-md);
+          background: rgba(0, 0, 0, 0.25);
+          border: 1px solid rgba(212, 175, 55, 0.1);
+          color: var(--text-primary);
           font-size: 1rem;
           outline: none;
-          transition: border-color 0.2s;
+          transition: all 0.3s ease;
         }
         .input-group input:focus {
           border-color: var(--accent-color);
+          box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
+          background: rgba(0, 0, 0, 0.4);
         }
         .login-btn {
           width: 100%;
-          padding: 1rem;
+          padding: 1.1rem;
           background: var(--accent-color);
-          color: white;
+          color: var(--bg-primary);
           border: none;
-          border-radius: var(--radius-sm);
+          border-radius: var(--radius-md);
           font-size: 1.1rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
-          margin-top: 1rem;
+          transition: all 0.3s ease;
+          margin-top: 1.5rem;
+          font-family: var(--font-main);
         }
-        .login-btn:hover {
-          background: #ff6b81;
+        .login-btn:hover:not(:disabled) {
+          background: var(--accent-hover);
           transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
         }
         .login-btn:disabled {
-          background: #555;
+          background: #475569;
+          color: #94a3b8;
           cursor: not-allowed;
           transform: none;
         }
         .error-msg {
           color: var(--danger-color);
-          background: rgba(255, 71, 87, 0.1);
-          padding: 0.75rem;
-          border-radius: var(--radius-sm);
+          background: rgba(239, 68, 68, 0.1);
+          padding: 0.85rem;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: var(--radius-md);
           margin-bottom: 1.5rem;
           text-align: center;
-          font-size: 0.9rem;
+          font-size: 0.95rem;
         }
         @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>

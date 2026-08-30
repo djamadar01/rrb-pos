@@ -136,7 +136,7 @@ export default function ReportsDashboard() {
             <h3 style={{ marginBottom: '1rem' }}>Top Sellers</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               {analytics.topItems.map((item: any, idx: number) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                   <span>{idx + 1}. {item.name}</span>
                   <span style={{ color: 'var(--success-color)' }}>{item.qty} sold</span>
                 </div>

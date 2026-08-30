@@ -350,7 +350,7 @@ export default function POSPage() {
                       borderRadius: '8px', 
                       border: 'none', 
                       background: selectedCategory?.id === cat.id ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', 
-                      color: 'white', 
+                      color: selectedCategory?.id === cat.id ? 'var(--bg-primary)' : 'var(--text-primary)', 
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -451,10 +451,10 @@ export default function POSPage() {
                         <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>₹{item.price.toFixed(2)} {t("each")}</div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <button onClick={() => updateQuantity(item.cartId, -1)} style={{ padding: '0.2rem 0.5rem', background: '#333', color: 'white', border: 'none', borderRadius: '4px' }}>-</button>
+                        <button onClick={() => updateQuantity(item.cartId, -1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>-</button>
                         <span>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.cartId, 1)} style={{ padding: '0.2rem 0.5rem', background: '#333', color: 'white', border: 'none', borderRadius: '4px' }}>+</button>
-                        <button onClick={() => removeFromCart(item.cartId)} style={{ marginLeft: '0.5rem', padding: '0.2rem 0.5rem', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '4px' }}>X</button>
+                        <button onClick={() => updateQuantity(item.cartId, 1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>+</button>
+                        <button onClick={() => removeFromCart(item.cartId)} style={{ marginLeft: '0.5rem', padding: '0.2rem 0.5rem', background: 'var(--danger-color)', color: 'white', border: 'none', borderRadius: '4px' }}>X</button>
                       </div>
                       <span style={{ marginLeft: '1rem', minWidth: '40px', textAlign: 'right' }}>₹{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
