@@ -279,14 +279,27 @@ export default function POSPage() {
     text += `----------------------\n`;
     text += `Thank you for visiting!\n`;
 
-    if (navigator.share) {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const file = new File([blob], `receipt_${selectedBill.billNumber}.txt`, { type: 'text/plain' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: `Receipt ${selectedBill.billNumber}`,
+          text: text,
+          files: [file]
+        });
+      } catch (err) {
+        console.error("Error sharing file", err);
+      }
+    } else if (navigator.share) {
       try {
         await navigator.share({
           title: `Receipt ${selectedBill.billNumber}`,
           text: text,
         });
       } catch (err) {
-        console.error("Error sharing", err);
+        console.error("Error sharing text", err);
       }
     } else {
       alert("Sharing is not supported on this device/browser.");
