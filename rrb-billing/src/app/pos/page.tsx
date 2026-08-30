@@ -311,17 +311,30 @@ export default function POSPage() {
       }
       const file = new File([blob], `receipt_${selectedBill.billNumber}.png`, { type: 'image/png' });
       
+      let shared = false;
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
             title: `Receipt ${selectedBill.billNumber}`,
             files: [file]
           });
+          shared = true;
         } catch (err) {
           console.error("Error sharing image", err);
         }
-      } else {
-        alert("Sharing images is not supported on this device/browser.");
+      } 
+      
+      if (!shared) {
+        // Fallback: Download the image so user can open it manually
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `receipt_${selectedBill.billNumber}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert("Receipt saved to your device! Open your Panda app, tap 'Select Image', and choose the saved receipt.");
       }
     }, 'image/png');
   };
