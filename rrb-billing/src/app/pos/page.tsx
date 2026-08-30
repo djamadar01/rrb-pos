@@ -279,64 +279,9 @@ export default function POSPage() {
     text += `----------------------\n`;
     text += `Thank you for visiting!\n`;
 
-    const lines = text.split('\n');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) {
-      alert("Canvas not supported on this browser.");
-      return;
-    }
-
-    const fontSize = 24;
-    const lineHeight = 34;
-    canvas.width = 576; // Standard 80mm thermal printer dot width
-    canvas.height = lines.length * lineHeight + 40;
-    
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = 'black';
-    ctx.font = `${fontSize}px monospace`;
-    ctx.textBaseline = 'top';
-    
-    lines.forEach((line, i) => {
-      ctx.fillText(line, 20, 20 + (i * lineHeight));
-    });
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        alert("Failed to generate receipt image.");
-        return;
-      }
-      const file = new File([blob], `receipt_${selectedBill.billNumber}.png`, { type: 'image/png' });
-      
-      let shared = false;
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            title: `Receipt ${selectedBill.billNumber}`,
-            files: [file]
-          });
-          shared = true;
-        } catch (err) {
-          console.error("Error sharing image", err);
-        }
-      } 
-      
-      if (!shared) {
-        // Fallback: Download the image so user can open it manually
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `receipt_${selectedBill.billNumber}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert("Receipt saved to your device! Open your Panda app, tap 'Select Image', and choose the saved receipt.");
-      }
-    }, 'image/png');
+    const base64Text = btoa(unescape(encodeURIComponent(text)));
+    const url = "intent:base64," + base64Text + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+    window.location.href = url;
   };
 
   if (status === "loading") {
@@ -682,7 +627,7 @@ export default function POSPage() {
                 {t("printBill")}
               </button>
               <button className="btn-primary" onClick={shareBill} style={{ flex: 1, background: 'var(--accent-color)', color: 'var(--bg-primary)' }}>
-                Share to App
+                Print via RawBT
               </button>
               <button className="btn-primary" onClick={() => setSelectedBill(null)} style={{ flex: 1, background: 'var(--danger-color)' }}>
                 {t("close")}
