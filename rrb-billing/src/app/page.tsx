@@ -81,7 +81,7 @@ export default function Home() {
         
         <div className="action-links">
           {!session ? (
-            <Link href="/api/auth/signin" className="link-btn primary">
+            <Link href="/login" className="link-btn primary">
               Sign In to System
             </Link>
           ) : (

@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import MenuManager from "@/components/MenuManager";
 import { useLanguage } from "@/lib/i18n";
 import LanguageToggle from "@/components/LanguageToggle";
 
 export default function POSPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [cart, setCart] = useState<any[]>([]);
   const [menu, setMenu] = useState<any[]>([]);
   const [outlet, setOutlet] = useState<any>(null);
@@ -21,6 +25,12 @@ export default function POSPage() {
   const [activeTab, setActiveTab] = useState("Menu");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { t } = useLanguage();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
 
   const itemsToShow = useMemo(() => {
     if (!selectedCategory) return [];
@@ -38,6 +48,7 @@ export default function POSPage() {
   };
 
   useEffect(() => {
+    if (status !== "authenticated") return;
     // Fetch menu
     fetch("/api/menu").then(res => res.json()).then(data => {
       if (Array.isArray(data)) setMenu(data.filter((item: any) => item.isActive));
@@ -244,6 +255,18 @@ export default function POSPage() {
   const printBill = () => {
     window.print();
   };
+
+  if (status === "loading") {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: 'white' }}>
+        <p>Loading POS...</p>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   return (
     <div className="dashboard-layout">

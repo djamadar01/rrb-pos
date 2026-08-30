@@ -77,11 +77,12 @@ export default function MenuManager() {
         setNewCatImage(null);
         fetchData();
       } else {
-        const data = await res.json();
-        alert(`Failed: ${data.error}`);
+        const data = await res.json().catch(() => ({}));
+        alert(data.error === "Unauthorized" ? "Failed: Unauthorized. Please log in as an Owner or Manager." : `Failed: ${data.error || "Could not add category"}`);
       }
     } catch (err) {
       console.error(err);
+      alert("An error occurred while creating the category.");
     } finally {
       setIsSubmitting(false);
     }
@@ -94,8 +95,8 @@ export default function MenuManager() {
       if (res.ok) {
         fetchData();
       } else {
-        const data = await res.json();
-        alert(data.error);
+        const data = await res.json().catch(() => ({}));
+        alert(data.error === "Unauthorized" ? "Failed: Unauthorized. Please log in." : data.error || "Could not delete category.");
       }
     } catch (err) {
       console.error(err);
@@ -125,11 +126,12 @@ export default function MenuManager() {
         setNewDishImage(null);
         fetchData();
       } else {
-        const data = await res.json();
-        alert(`Failed: ${data.error}`);
+        const data = await res.json().catch(() => ({}));
+        alert(data.error === "Unauthorized" ? "Failed: Unauthorized. Please log in as an Owner or Manager." : `Failed: ${data.error || "Could not add dish"}`);
       }
     } catch (err) {
       console.error(err);
+      alert("An error occurred while creating the dish.");
     } finally {
       setIsSubmitting(false);
     }

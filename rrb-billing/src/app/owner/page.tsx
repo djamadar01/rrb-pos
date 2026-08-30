@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import MenuManager from "@/components/MenuManager";
 import UserManager from "@/components/UserManager";
 import OutletManager from "@/components/OutletManager";
@@ -10,6 +12,8 @@ import { useLanguage } from "@/lib/i18n";
 import LanguageToggle from "@/components/LanguageToggle";
 
 export default function OwnerDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const { t } = useLanguage();
   const [stats, setStats] = useState({ revenue: 0, bills: 0, activeShifts: 0, onlinePayments: 0, cashPayments: 0 });
   const [outlets, setOutlets] = useState<any[]>([]);
@@ -19,6 +23,14 @@ export default function OwnerDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
     const fetchData = () => {
       fetch("/api/reports/dashboard", { cache: 'no-store' })
         .then(res => res.json())
@@ -37,7 +49,19 @@ export default function OwnerDashboard() {
     const interval = setInterval(fetchData, 5000); // Poll every 5 seconds
     
     return () => clearInterval(interval);
-  }, []);
+  }, [status]);
+
+  if (status === "loading") {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: 'white' }}>
+        <p>Loading Dashboard...</p>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   const handleExport = async (type: string) => {
     const token = window.prompt(`Enter 2FA Code to export ${type} report (Use 123456 for demo):`);
