@@ -21,20 +21,11 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create unique filename
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.name);
-    const filename = file.name.replace(ext, "") + "-" + uniqueSuffix + ext;
-    const uploadDir = path.join(process.cwd(), "public/uploads");
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const filepath = path.join(uploadDir, filename);
-    fs.writeFileSync(filepath, buffer);
-
-    const fileUrl = `/uploads/${filename}`;
+    // Vercel serverless environments have a read-only filesystem.
+    // Instead of writing to disk, convert the image to a Base64 Data URL.
+    const mimeType = file.type || 'image/jpeg';
+    const base64Data = buffer.toString('base64');
+    const fileUrl = `data:${mimeType};base64,${base64Data}`;
 
     return NextResponse.json({ success: true, url: fileUrl });
   } catch (error) {
