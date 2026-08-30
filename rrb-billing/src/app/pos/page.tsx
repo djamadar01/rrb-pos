@@ -279,31 +279,51 @@ export default function POSPage() {
     text += `----------------------\n`;
     text += `Thank you for visiting!\n`;
 
-    const blob = new Blob([text], { type: 'text/plain' });
-    const file = new File([blob], `receipt_${selectedBill.billNumber}.txt`, { type: 'text/plain' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          title: `Receipt ${selectedBill.billNumber}`,
-          text: text,
-          files: [file]
-        });
-      } catch (err) {
-        console.error("Error sharing file", err);
-      }
-    } else if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Receipt ${selectedBill.billNumber}`,
-          text: text,
-        });
-      } catch (err) {
-        console.error("Error sharing text", err);
-      }
-    } else {
-      alert("Sharing is not supported on this device/browser.");
+    const lines = text.split('\n');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      alert("Canvas not supported on this browser.");
+      return;
     }
+
+    const fontSize = 24;
+    const lineHeight = 34;
+    canvas.width = 576; // Standard 80mm thermal printer dot width
+    canvas.height = lines.length * lineHeight + 40;
+    
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = 'black';
+    ctx.font = `${fontSize}px monospace`;
+    ctx.textBaseline = 'top';
+    
+    lines.forEach((line, i) => {
+      ctx.fillText(line, 20, 20 + (i * lineHeight));
+    });
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        alert("Failed to generate receipt image.");
+        return;
+      }
+      const file = new File([blob], `receipt_${selectedBill.billNumber}.png`, { type: 'image/png' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: `Receipt ${selectedBill.billNumber}`,
+            files: [file]
+          });
+        } catch (err) {
+          console.error("Error sharing image", err);
+        }
+      } else {
+        alert("Sharing images is not supported on this device/browser.");
+      }
+    }, 'image/png');
   };
 
   if (status === "loading") {
