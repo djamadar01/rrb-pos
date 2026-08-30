@@ -96,7 +96,13 @@ export async function POST(req: Request) {
         }
       },
       include: {
-        items: true,
+        items: {
+          include: {
+            menuItem: true
+          }
+        },
+        outlet: true,
+        creator: true,
         payments: true
       }
     });

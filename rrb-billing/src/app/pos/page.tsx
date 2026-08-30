@@ -152,9 +152,9 @@ export default function POSPage() {
         setCart([]);
         fetchRecentBills(outlet.id);
         
-        // Auto-print newly created bill
-        await viewBill(newBill.id); 
-        setTimeout(() => window.print(), 500); // Slight delay for modal to render
+        // Render bill immediately and auto-print
+        setSelectedBill(newBill);
+        setTimeout(() => window.print(), 100); // Slight delay for modal to render
       } else {
         alert("Failed to create bill.");
       }
@@ -224,9 +224,9 @@ export default function POSPage() {
         setCart([]);
         fetchRecentBills(outlet.id);
         
-        // Auto-print newly created bill
-        await viewBill(newBill.id); 
-        setTimeout(() => window.print(), 500);
+        // Render bill immediately and auto-print
+        setSelectedBill(newBill);
+        setTimeout(() => window.print(), 100);
       } else {
         alert("Failed to create bill after payment.");
       }
