@@ -6,13 +6,13 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "RRB Fast Food & Chinese Billing",
+  title: "RRB",
   description: "Multi-outlet billing and management system",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "RRB POS",
+    title: "RRB",
   },
   themeColor: "#0f172a",
   viewport: {

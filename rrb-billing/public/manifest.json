@@ -1,6 +1,6 @@
 {
-  "name": "RRB Fast Food POS",
-  "short_name": "RRB POS",
+  "name": "RRB",
+  "short_name": "RRB",
   "description": "Multi-Outlet Billing & Management System",
   "start_url": "/pos",
   "display": "standalone",
@@ -8,14 +8,15 @@
   "theme_color": "#ff4757",
   "icons": [
     {
-      "src": "/apple-touch-icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/rrb-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
     },
     {
-      "src": "/apple-touch-icon.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/rrb-logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     }
   ]
 }
