@@ -269,13 +269,13 @@ export default function POSPage() {
     selectedBill.items.forEach((item: any) => {
        const name = item.menuItem?.name || item.name;
        text += `${name}\n`;
-       text += `${item.quantity} x ₹${(item.subtotal/item.quantity).toFixed(2)} = ₹${item.subtotal.toFixed(2)}\n`;
+       text += `${item.quantity} x Rs.${(item.subtotal/item.quantity).toFixed(2)} = Rs.${item.subtotal.toFixed(2)}\n`;
     });
     
     text += `----------------------\n`;
-    text += `Subtotal: ₹${selectedBill.subtotal.toFixed(2)}\n`;
-    text += `Tax: ₹${selectedBill.taxAmount.toFixed(2)}\n`;
-    text += `TOTAL: ₹${selectedBill.finalAmount.toFixed(2)}\n`;
+    text += `Subtotal: Rs.${selectedBill.subtotal.toFixed(2)}\n`;
+    text += `Tax: Rs.${selectedBill.taxAmount.toFixed(2)}\n`;
+    text += `TOTAL: Rs.${selectedBill.finalAmount.toFixed(2)}\n`;
     text += `----------------------\n`;
     text += `Thank you for visiting!\n`;
 
