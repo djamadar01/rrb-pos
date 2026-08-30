@@ -47,8 +47,50 @@ export default function MenuManager() {
   }, []);
 
   const uploadImage = async (file: File) => {
+    // Compress image client-side to prevent massive Base64 strings in the DB
+    const compressedBlob = await new Promise<Blob>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error("Canvas to Blob failed"));
+            },
+            "image/jpeg",
+            0.7
+          );
+        };
+      };
+      reader.onerror = reject;
+    });
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", compressedBlob, file.name);
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     if (!res.ok) throw new Error("Upload failed");
     const data = await res.json();
