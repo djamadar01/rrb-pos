@@ -256,6 +256,43 @@ export default function POSPage() {
     window.print();
   };
 
+  const shareBill = async () => {
+    if (!selectedBill) return;
+    
+    let text = `--- RRB Fast Food ---\n`;
+    text += `${selectedBill.outlet?.name || ''}\n`;
+    text += `Bill No: ${selectedBill.billNumber}\n`;
+    text += `Date: ${new Date(selectedBill.createdAt).toLocaleString()}\n`;
+    text += `Cashier: ${selectedBill.creator?.name || ''}\n`;
+    text += `----------------------\n`;
+    
+    selectedBill.items.forEach((item: any) => {
+       const name = item.menuItem?.name || item.name;
+       text += `${name}\n`;
+       text += `${item.quantity} x ₹${(item.subtotal/item.quantity).toFixed(2)} = ₹${item.subtotal.toFixed(2)}\n`;
+    });
+    
+    text += `----------------------\n`;
+    text += `Subtotal: ₹${selectedBill.subtotal.toFixed(2)}\n`;
+    text += `Tax: ₹${selectedBill.taxAmount.toFixed(2)}\n`;
+    text += `TOTAL: ₹${selectedBill.finalAmount.toFixed(2)}\n`;
+    text += `----------------------\n`;
+    text += `Thank you for visiting!\n`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Receipt ${selectedBill.billNumber}`,
+          text: text,
+        });
+      } catch (err) {
+        console.error("Error sharing", err);
+      }
+    } else {
+      alert("Sharing is not supported on this device/browser.");
+    }
+  };
+
   if (status === "loading") {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: 'white' }}>
@@ -597,6 +634,9 @@ export default function POSPage() {
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
               <button className="btn-primary" onClick={printBill} style={{ flex: 1, background: 'var(--success-color)' }}>
                 {t("printBill")}
+              </button>
+              <button className="btn-primary" onClick={shareBill} style={{ flex: 1, background: 'var(--accent-color)', color: 'var(--bg-primary)' }}>
+                Share to App
               </button>
               <button className="btn-primary" onClick={() => setSelectedBill(null)} style={{ flex: 1, background: 'var(--danger-color)' }}>
                 {t("close")}
