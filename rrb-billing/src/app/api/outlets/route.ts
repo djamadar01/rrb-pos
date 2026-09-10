@@ -14,7 +14,11 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(outlets);
+    return NextResponse.json(outlets, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300"
+      }
+    });
   } catch (error) {
     console.error("Failed to fetch outlets:", error);
     return NextResponse.json({ error: "Failed to fetch outlets" }, { status: 500 });

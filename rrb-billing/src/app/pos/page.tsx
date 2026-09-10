@@ -47,24 +47,62 @@ export default function POSPage() {
     }
   }, []);
 
-  // Fetch menu, categories, and outlet ONCE concurrently on mount when authenticated
+  // 1. Instant hydration from client cache (0ms load time!)
+  useEffect(() => {
+    try {
+      const cachedCats = localStorage.getItem("rrb_pos_cats");
+      const cachedMenu = localStorage.getItem("rrb_pos_menu");
+      const cachedOutlet = localStorage.getItem("rrb_pos_outlet");
+      if (cachedCats) setCategories(JSON.parse(cachedCats));
+      if (cachedMenu) setMenu(JSON.parse(cachedMenu));
+      if (cachedOutlet) setOutlet(JSON.parse(cachedOutlet));
+    } catch (e) {
+      console.error("Cache hydration error:", e);
+    }
+  }, []);
+
+  // 2. Fetch fresh menu, categories, and outlet in background (SWR pattern)
   useEffect(() => {
     if (status !== "authenticated") return;
     let isMounted = true;
 
-    Promise.all([
-      fetch("/api/menu").then(res => res.json()),
-      fetch("/api/categories").then(res => res.json()),
-      fetch("/api/outlets").then(res => res.json())
-    ]).then(([menuData, catData, outletsData]) => {
-      if (!isMounted) return;
-      if (Array.isArray(menuData)) setMenu(menuData.filter((item: any) => item.isActive));
-      if (Array.isArray(catData)) setCategories(catData);
-      if (Array.isArray(outletsData) && outletsData.length > 0) {
-        setOutlet(outletsData[0]);
-        fetchRecentBills(outletsData[0].id);
-      }
-    }).catch(console.error);
+    // Fetch categories
+    fetch("/api/categories")
+      .then(res => res.json())
+      .then(catData => {
+        if (!isMounted) return;
+        if (Array.isArray(catData)) {
+          setCategories(catData);
+          try { localStorage.setItem("rrb_pos_cats", JSON.stringify(catData)); } catch {}
+        }
+      })
+      .catch(console.error);
+
+    // Fetch menu
+    fetch("/api/menu")
+      .then(res => res.json())
+      .then(menuData => {
+        if (!isMounted) return;
+        if (Array.isArray(menuData)) {
+          const active = menuData.filter((item: any) => item.isActive);
+          setMenu(active);
+          try { localStorage.setItem("rrb_pos_menu", JSON.stringify(active)); } catch {}
+        }
+      })
+      .catch(console.error);
+
+    // Fetch outlet
+    fetch("/api/outlets")
+      .then(res => res.json())
+      .then(outletsData => {
+        if (!isMounted) return;
+        if (Array.isArray(outletsData) && outletsData.length > 0) {
+          setOutlet(outletsData[0]);
+          try { localStorage.setItem("rrb_pos_outlet", JSON.stringify(outletsData[0])); } catch {}
+          fetchRecentBills(outletsData[0].id);
+        }
+      })
+      .catch(console.error);
 
     return () => { isMounted = false; };
   }, [status, fetchRecentBills]);
@@ -382,76 +420,88 @@ export default function POSPage() {
             </div>
             
             {!selectedCategory ? (
-              <div className="menu-grid">
-              {categories.map(cat => (
-                <button 
-                  key={cat.id} 
-                  className="category-btn"
-                  onClick={() => setSelectedCategory(cat)}
-                  style={{ 
-                    padding: '1rem', 
-                    borderRadius: '8px', 
-                    border: 'none', 
-                    background: selectedCategory?.id === cat.id ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', 
-                    color: selectedCategory?.id === cat.id ? 'var(--bg-primary)' : 'var(--text-primary)', 
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  {cat.imageUrl ? (
-                    <img src={cat.imageUrl} alt={cat.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🏷️</div>
-                  )}
-                  <span>{cat.name}</span>
-                </button>
-              ))}
-            </div>
-            ) : (
-              <div className="menu-grid" style={{ paddingBottom: '80px' }}>
-                {itemsToShow.map((item) => {
-                  const qty = getCartQuantity(item.id);
-                  const cartId = getCartId(item.id);
-                  
-                  return (
-                    <div 
-                      key={item.id} 
-                      className="menu-item-card glass-panel"
-                      style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-                    >
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '120px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🍽️</div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                        <span className="item-name" style={{ fontWeight: 'bold' }}>{item.name}</span>
-                        <span className="item-price" style={{ color: 'var(--accent-color)' }}>₹{item.price.toFixed(2)}</span>
-                      </div>
-                      
-                      <div style={{ marginTop: '0.5rem' }}>
-                        {qty === 0 ? (
-                          <button 
-                            onClick={() => addToCart(item)}
-                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold' }}
-                          >
-                            + ADD
-                          </button>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                            <button onClick={() => updateQuantity(cartId!, -1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                            <span style={{ fontWeight: 'bold' }}>{qty}</span>
-                            <button onClick={() => updateQuantity(cartId!, 1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              categories.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                  <p>⏳ Loading categories & dishes...</p>
+                </div>
+              ) : (
+                <div className="menu-grid">
+                {categories.map(cat => (
+                  <button 
+                    key={cat.id} 
+                    className="category-btn"
+                    onClick={() => setSelectedCategory(cat)}
+                    style={{ 
+                      padding: '1rem', 
+                      borderRadius: '8px', 
+                      border: 'none', 
+                      background: selectedCategory?.id === cat.id ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', 
+                      color: selectedCategory?.id === cat.id ? 'var(--bg-primary)' : 'var(--text-primary)', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    {cat.imageUrl ? (
+                      <img src={cat.imageUrl} alt={cat.name} loading="lazy" decoding="async" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🏷️</div>
+                    )}
+                    <span>{cat.name}</span>
+                  </button>
+                ))}
               </div>
+              )
+            ) : (
+              itemsToShow.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                  <p>No dishes found in this category.</p>
+                </div>
+              ) : (
+                <div className="menu-grid" style={{ paddingBottom: '80px' }}>
+                  {itemsToShow.map((item) => {
+                    const qty = getCartQuantity(item.id);
+                    const cartId = getCartId(item.id);
+                    
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="menu-item-card glass-panel"
+                        style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+                      >
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '120px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🍽️</div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                          <span className="item-name" style={{ fontWeight: 'bold' }}>{item.name}</span>
+                          <span className="item-price" style={{ color: 'var(--accent-color)' }}>₹{item.price.toFixed(2)}</span>
+                        </div>
+                        
+                        <div style={{ marginTop: '0.5rem' }}>
+                          {qty === 0 ? (
+                            <button 
+                              onClick={() => addToCart(item)}
+                              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold' }}
+                            >
+                              + ADD
+                            </button>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                              <button onClick={() => updateQuantity(cartId!, -1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                              <span style={{ fontWeight: 'bold' }}>{qty}</span>
+                              <button onClick={() => updateQuantity(cartId!, 1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </section>
           

@@ -8,7 +8,11 @@ export async function GET() {
     const categories = await prisma.category.findMany({
       where: { isActive: true },
     });
-    return NextResponse.json(categories);
+    return NextResponse.json(categories, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300"
+      }
+    });
   } catch (error) {
     console.error("Failed to fetch categories:", error);
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });

@@ -26,15 +26,20 @@ export default function MenuManager() {
   const [editItemData, setEditItemData] = useState({ name: "", price: "", categoryId: "", imageUrl: "" });
 
   const fetchData = async () => {
-    setIsLoading(true);
     try {
       const [menuRes, catRes] = await Promise.all([
         fetch("/api/menu"),
         fetch("/api/categories")
       ]);
       const [menuData, catData] = await Promise.all([menuRes.json(), catRes.json()]);
-      if (Array.isArray(menuData)) setMenu(menuData);
-      if (Array.isArray(catData)) setCategories(catData);
+      if (Array.isArray(menuData)) {
+        setMenu(menuData);
+        try { localStorage.setItem("rrb_pos_menu", JSON.stringify(menuData.filter((i: any) => i.isActive))); } catch {}
+      }
+      if (Array.isArray(catData)) {
+        setCategories(catData);
+        try { localStorage.setItem("rrb_pos_cats", JSON.stringify(catData)); } catch {}
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -43,6 +48,15 @@ export default function MenuManager() {
   };
 
   useEffect(() => {
+    try {
+      const cachedMenu = localStorage.getItem("rrb_pos_menu");
+      const cachedCats = localStorage.getItem("rrb_pos_cats");
+      if (cachedMenu) {
+        setMenu(JSON.parse(cachedMenu));
+        setIsLoading(false);
+      }
+      if (cachedCats) setCategories(JSON.parse(cachedCats));
+    } catch {}
     fetchData();
   }, []);
 

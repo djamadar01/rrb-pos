@@ -13,7 +13,11 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(menuItems);
+    return NextResponse.json(menuItems, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300"
+      }
+    });
   } catch (error) {
     console.error("Failed to fetch menu:", error);
     return NextResponse.json({ error: "Failed to fetch menu" }, { status: 500 });
