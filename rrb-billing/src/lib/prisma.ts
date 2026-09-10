@@ -1,29 +1,23 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaD1 } from '@prisma/adapter-d1';
 import { PrismaClient } from '@prisma/client/wasm';
-
-if (typeof WebSocket === 'undefined') {
-  try {
-    // Node.js local development
-    const ws = require('ws');
-    neonConfig.webSocketConstructor = ws;
-  } catch {
-    // ignore
-  }
-}
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
+  try {
+    const cf = getCloudflareContext();
+    const d1 = (cf?.env as any)?.DB;
 
-  if (!connectionString) {
-    console.error("DATABASE_URL is not set in environment!");
+    if (d1) {
+      const adapter = new PrismaD1(d1);
+      return new PrismaClient({ adapter, log: ['error', 'warn'] });
+    }
+  } catch (err) {
+    // getCloudflareContext not available in static/build context
   }
 
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaNeon(pool);
-  return new PrismaClient({ adapter, log: ['error', 'warn'] });
+  return new PrismaClient({ log: ['error', 'warn'] });
 }
 
 export function getPrisma(): PrismaClient {
@@ -43,4 +37,3 @@ export const prisma = new Proxy({} as PrismaClient, {
     return value;
   }
 });
-

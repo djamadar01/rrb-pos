@@ -9,8 +9,14 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rrb-pos-db",
+      "database_id": "85b7b989-5d55-475a-9a87-560dbc356c0b"
+    }
+  ],
   "vars": {
-    "DATABASE_URL": "postgresql://rrb-pos-db_owner:npg_WIQaz4pb1TKD@ep-proud-lake-azfdb08e-pooler.c-3.ap-southeast-1.aws.neon.tech/rrb-pos-db?sslmode=require&channel_binding=require",
     "NEXTAUTH_SECRET": "super-secret-key-1234567890-rrb-billing"
   }
 }
