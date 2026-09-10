@@ -296,6 +296,33 @@ export default function OwnerDashboard() {
               <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent-color)' }}>Staff & Managers</h3>
               <UserManager />
             </div>
+
+            <div>
+              <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent-color)' }}>Cloudflare R2 Object Storage</h3>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                Offload dish and category images from the PostgreSQL database to Cloudflare R2 CDN storage for instant loading.
+              </p>
+              <button
+                onClick={async () => {
+                  if (!confirm("Migrate all existing Base64 dish images to Cloudflare R2? Make sure R2 credentials are added to environment variables.")) return;
+                  try {
+                    const res = await fetch("/api/upload/migrate-r2", { method: "POST" });
+                    const data = await res.json();
+                    if (res.ok) {
+                      alert(data.message);
+                    } else {
+                      alert(data.error || "Migration failed. Check Cloudflare R2 configuration.");
+                    }
+                  } catch (e) {
+                    alert("Migration request failed.");
+                  }
+                }}
+                className="btn-primary"
+                style={{ background: '#f59e0b', color: 'black', fontWeight: 'bold' }}
+              >
+                ☁️ Migrate Existing Database Images to Cloudflare R2
+              </button>
+            </div>
           </section>
         </div>
       </main>
