@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rrb-pos",
+  "account_id": "f059e6cfcaabe45b12c3384a6e589b52",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "DATABASE_URL": "postgresql://rrb-pos-db_owner:npg_WIQaz4pb1TKD@ep-proud-lake-azfdb08e-pooler.c-3.ap-southeast-1.aws.neon.tech/rrb-pos-db?sslmode=require&channel_binding=require",
+    "NEXTAUTH_SECRET": "super-secret-key-1234567890-rrb-billing"
+  }
+}
