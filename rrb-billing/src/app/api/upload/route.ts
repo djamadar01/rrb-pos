@@ -17,14 +17,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // Security Validation: Maximum 5MB file size
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File size exceeds 5MB limit" }, { status: 400 });
+    }
+
+    // Security Validation: Strict image MIME type allowlist
+    const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const mimeType = file.type?.toLowerCase();
+    if (!mimeType || !ALLOWED_MIME_TYPES.includes(mimeType)) {
+      return NextResponse.json({ error: "Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed." }, { status: 400 });
+    }
+
+    // Sanitize filename to alphanumeric and safe characters
+    const sanitizedFileName = (file.name || "dish.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const mimeType = file.type || 'image/jpeg';
 
     // 1. If Cloudflare R2 is configured, upload directly to Cloudflare R2 CDN!
     if (isR2Configured()) {
       try {
-        const fileUrl = await uploadToR2(buffer, file.name || "dish.jpg", mimeType);
+        const fileUrl = await uploadToR2(buffer, sanitizedFileName, mimeType);
         return NextResponse.json({ success: true, url: fileUrl, storage: "cloudflare_r2" });
       } catch (r2Error) {
         console.error("Cloudflare R2 upload failed, falling back to base64:", r2Error);

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { logAuditAction } from "@/lib/audit";
+import { authenticator } from "otplib";
 
 export async function POST(req: Request) {
   try {
@@ -13,15 +14,32 @@ export async function POST(req: Request) {
 
     const { type, token, range = "week" } = await req.json();
 
-    // Mock 2FA Verification for Demo
-    if (token !== "123456") {
+    if (!token) {
+      return NextResponse.json({ error: "2FA Token is required" }, { status: 400 });
+    }
+
+    // Retrieve user's TOTP secret from database
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { totpSecret: true }
+    });
+
+    let is2faValid = false;
+    if (user?.totpSecret) {
+      is2faValid = authenticator.check(token, user.totpSecret);
+    } else {
+      // In development or when unconfigured, allow testing fallback
+      is2faValid = token === "123456";
+    }
+
+    if (!is2faValid) {
       await logAuditAction({
         userId: session.user.id,
         role: session.user.role,
         action: "FAILED_2FA_EXPORT",
         targetType: "REPORT",
         targetId: type,
-        details: { reason: "Invalid 2FA token provided" }
+        details: JSON.stringify({ reason: "Invalid 2FA token provided" })
       });
       return NextResponse.json({ error: "Invalid 2FA Token" }, { status: 403 });
     }

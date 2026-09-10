@@ -14,6 +14,10 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (session.user.role !== "OWNER" && session.user.role !== "MANAGER") {
+      return NextResponse.json({ error: "Forbidden: Only Managers or Owners can refund bills" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { reason } = body;
     const { id } = await params;

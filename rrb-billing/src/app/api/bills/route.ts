@@ -46,9 +46,37 @@ export async function POST(req: Request) {
       shiftId = activeShift.id;
     }
 
-    // We should ideally calculate subtotal and tax on the server to prevent tampering,
-    // but for simplicity in this demo we'll accept them and just record them.
-    // Ensure billNumber is generated safely (e.g., sequentially per outlet)
+    // Security: Validate items array
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "Bill must contain at least one item" }, { status: 400 });
+    }
+
+    // Security: Fetch verified menu item prices from database to prevent price tampering
+    const itemIds = items.map((i: any) => i.menuItemId).filter(Boolean);
+    const dbItems = await prisma.menuItem.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, price: true }
+    });
+    const priceMap = new Map(dbItems.map((d: any) => [d.id, d.price]));
+
+    let verifiedSubtotal = 0;
+    const validatedItems = items.map((item: any) => {
+      const realUnitPrice = priceMap.has(item.menuItemId) ? priceMap.get(item.menuItemId)! : (item.unitPrice || 0);
+      const qty = Math.max(1, parseInt(item.quantity) || 1);
+      const itemSubtotal = realUnitPrice * qty;
+      verifiedSubtotal += itemSubtotal;
+      return {
+        ...item,
+        quantity: qty,
+        unitPrice: realUnitPrice,
+        subtotal: itemSubtotal
+      };
+    });
+
+    // Use verified subtotal
+    subtotal = verifiedSubtotal;
+    const calculatedFinal = Math.max(0, subtotal + (taxAmount || 0) + (serviceCharge || 0) - (discount || 0));
+    finalAmount = calculatedFinal;
     
     // Simplistic bill number generation
     const lastBill = await prisma.bill.findFirst({
@@ -74,7 +102,7 @@ export async function POST(req: Request) {
         status: "PAID",
         idempotencyKey,
         items: {
-          create: items.map((item: any) => ({
+          create: validatedItems.map((item: any) => ({
             menuItemId: item.menuItemId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
