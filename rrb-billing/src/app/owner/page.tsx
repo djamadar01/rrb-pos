@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,10 @@ export default function OwnerDashboard() {
   const [recentBills, setRecentBills] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("Overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -28,28 +32,38 @@ export default function OwnerDashboard() {
     }
   }, [status, router]);
 
+  const fetchData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/reports/dashboard", { cache: 'no-store' });
+      const data = await res.json();
+      if (!data.error) {
+        setStats(data.stats);
+        setOutlets(data.outlets);
+        setLogs(data.logs);
+        if (data.recentBills) setRecentBills(data.recentBills);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (status !== "authenticated") return;
 
-    const fetchData = () => {
-      fetch("/api/reports/dashboard", { cache: 'no-store' })
-        .then(res => res.json())
-        .then(data => {
-          if (!data.error) {
-            setStats(data.stats);
-            setOutlets(data.outlets);
-            setLogs(data.logs);
-            if (data.recentBills) setRecentBills(data.recentBills);
-          }
-        })
-        .catch(console.error);
-    };
-
     fetchData(); // Initial fetch
-    const interval = setInterval(fetchData, 5000); // Poll every 5 seconds
+    
+    // Poll every 30 seconds only if window is active and on Overview
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && activeTabRef.current === 'Overview') {
+        fetchData();
+      }
+    }, 30000);
     
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status, fetchData]);
 
   if (status === "loading") {
     return (
@@ -94,148 +108,6 @@ export default function OwnerDashboard() {
       console.error(err);
       alert("An error occurred during export.");
     }
-  };
-
-  const renderContent = () => {
-    if (activeTab === "Overview") {
-      return (
-        <>
-          <section className="dashboard-stats">
-            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
-              <h3 style={{ color: 'var(--text-secondary)' }}>{t("todayRevenue")}</h3>
-              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.revenue?.toFixed(2) || "0.00"}</p>
-            </div>
-            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
-              <h3 style={{ color: 'var(--text-secondary)' }}>{t("totalOrdersToday")}</h3>
-              <p className="stat-value">{stats.bills || 0}</p>
-            </div>
-            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
-              <h3 style={{ color: 'var(--text-secondary)' }}>{t("onlinePayments")}</h3>
-              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.onlinePayments?.toFixed(2) || "0.00"}</p>
-            </div>
-            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
-              <h3 style={{ color: 'var(--text-secondary)' }}>{t("cashPayments")}</h3>
-              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.cashPayments?.toFixed(2) || "0.00"}</p>
-            </div>
-          </section>
-          
-          <section className="dashboard-logs glass-panel" style={{ marginTop: '1.5rem' }}>
-            <h2>Recent Bills (Global)</h2>
-            <div className="table-responsive">
-              <table style={{ width: '100%', textAlign: 'left', color: 'white' }}>
-                <thead>
-                  <tr>
-                    <th>Bill Number</th>
-                    <th>Outlet</th>
-                    <th>Creator</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentBills.map((bill: any) => (
-                    <tr key={bill.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '0.5rem 0' }}>{bill.billNumber}</td>
-                      <td>{bill.outlet?.name}</td>
-                      <td>{bill.creator?.name}</td>
-                      <td>₹{bill.finalAmount.toFixed(2)}</td>
-                      <td><span className={`badge ${bill.status === 'PAID' ? 'success' : 'danger'}`}>{bill.status}</span></td>
-                      <td>{new Date(bill.createdAt).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {recentBills.length === 0 && (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>No recent bills found.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      );
-    }
-    
-    if (activeTab === "Outlets") {
-      return (
-        <section className="dashboard-outlets glass-panel">
-          <h2>Revenue by Outlet</h2>
-          <ul className="outlet-list">
-            {outlets.map((outlet) => (
-              <li key={outlet.id} className="outlet-item">
-                <span className="outlet-name">{outlet.name}</span>
-                <span className="outlet-revenue">₹{outlet.revenue?.toFixed(2) || "0.00"}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      );
-    }
-    
-    if (activeTab === "Menu Management") {
-      return (
-        <section className="dashboard-menu glass-panel">
-          <h2>Menu Management</h2>
-          <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>Add, edit, and organize dishes globally across all outlets.</p>
-          <MenuManager />
-        </section>
-      );
-    }
-    
-    if (activeTab === "Reports") {
-      return (
-        <section className="dashboard-reports">
-          <ReportsDashboard />
-        </section>
-      );
-    }
-    
-    if (activeTab === "Audit Logs") {
-      return (
-        <section className="dashboard-logs glass-panel">
-          <h2>Recent Audit Logs (Security Flags)</h2>
-          <ul className="log-list">
-            {logs.map((log) => (
-              <li key={log.id} className="log-item">
-                <span className="log-time">[{log.time}]</span>
-                <span className="log-action">{log.action}</span>
-                <span className="log-reason">(Reason: {log.reason})</span>
-              </li>
-            ))}
-            {logs.length === 0 && <li>No recent logs.</li>}
-          </ul>
-        </section>
-      );
-    }
-    
-    if (activeTab === "Settings") {
-      return (
-        <section className="dashboard-settings glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div>
-            <h2>System Management</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>Manage your branches and employee access.</p>
-          </div>
-          
-          <div>
-            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent-color)' }}>Outlets & Branches</h3>
-            <OutletManager />
-          </div>
-
-          <div>
-            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent-color)' }}>Staff & Managers</h3>
-            <UserManager />
-          </div>
-        </section>
-      );
-    }
-    
-    return (
-      <section className="dashboard-logs glass-panel">
-        <h2>Settings</h2>
-        <p>Global configuration and tax rates go here.</p>
-      </section>
-    );
   };
 
   const tabIcons: Record<string, string> = {
@@ -291,7 +163,141 @@ export default function OwnerDashboard() {
       </aside>
 
       <main className="dashboard-main-content">
-        {renderContent()}
+        {/* Overview Tab */}
+        <div style={{ display: activeTab === "Overview" ? 'block' : 'none' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+            <button 
+              onClick={fetchData} 
+              disabled={isRefreshing}
+              className="btn-primary" 
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#334155' }}
+            >
+              {isRefreshing ? "Syncing..." : "🔄 Refresh"}
+            </button>
+          </div>
+
+          <section className="dashboard-stats">
+            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
+              <h3 style={{ color: 'var(--text-secondary)' }}>{t("todayRevenue")}</h3>
+              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.revenue?.toFixed(2) || "0.00"}</p>
+            </div>
+            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
+              <h3 style={{ color: 'var(--text-secondary)' }}>{t("totalOrdersToday")}</h3>
+              <p className="stat-value">{stats.bills || 0}</p>
+            </div>
+            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
+              <h3 style={{ color: 'var(--text-secondary)' }}>{t("onlinePayments")}</h3>
+              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.onlinePayments?.toFixed(2) || "0.00"}</p>
+            </div>
+            <div className="stat-card glass-panel" style={{ textAlign: 'center' }}>
+              <h3 style={{ color: 'var(--text-secondary)' }}>{t("cashPayments")}</h3>
+              <p className="stat-value" style={{ color: 'var(--accent-color)' }}>₹{stats.cashPayments?.toFixed(2) || "0.00"}</p>
+            </div>
+          </section>
+          
+          <section className="dashboard-logs glass-panel" style={{ marginTop: '1.5rem' }}>
+            <h2>Recent Bills (Global)</h2>
+            <div className="table-responsive">
+              <table style={{ width: '100%', textAlign: 'left', color: 'white' }}>
+                <thead>
+                  <tr>
+                    <th>Bill Number</th>
+                    <th>Outlet</th>
+                    <th>Creator</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentBills.map((bill: any) => (
+                    <tr key={bill.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '0.5rem 0' }}>{bill.billNumber}</td>
+                      <td>{bill.outlet?.name}</td>
+                      <td>{bill.creator?.name}</td>
+                      <td>₹{bill.finalAmount.toFixed(2)}</td>
+                      <td><span className={`badge ${bill.status === 'PAID' ? 'success' : 'danger'}`}>{bill.status}</span></td>
+                      <td>{new Date(bill.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {recentBills.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>No recent bills found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        {/* Outlets Tab */}
+        <div style={{ display: activeTab === "Outlets" ? 'block' : 'none' }}>
+          <section className="dashboard-outlets glass-panel">
+            <h2>Revenue by Outlet</h2>
+            <ul className="outlet-list">
+              {outlets.map((outlet) => (
+                <li key={outlet.id} className="outlet-item">
+                  <span className="outlet-name">{outlet.name}</span>
+                  <span className="outlet-revenue">₹{outlet.revenue?.toFixed(2) || "0.00"}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+
+        {/* Menu Management Tab */}
+        <div style={{ display: activeTab === "Menu Management" ? 'block' : 'none' }}>
+          <section className="dashboard-menu glass-panel">
+            <h2>Menu Management</h2>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>Add, edit, and organize dishes globally across all outlets.</p>
+            <MenuManager />
+          </section>
+        </div>
+
+        {/* Reports Tab */}
+        <div style={{ display: activeTab === "Reports" ? 'block' : 'none' }}>
+          <section className="dashboard-reports">
+            <ReportsDashboard />
+          </section>
+        </div>
+
+        {/* Audit Logs Tab */}
+        <div style={{ display: activeTab === "Audit Logs" ? 'block' : 'none' }}>
+          <section className="dashboard-logs glass-panel">
+            <h2>Recent Audit Logs (Security Flags)</h2>
+            <ul className="log-list">
+              {logs.map((log) => (
+                <li key={log.id} className="log-item">
+                  <span className="log-time">[{log.time}]</span>
+                  <span className="log-action">{log.action}</span>
+                  <span className="log-reason">(Reason: {log.reason})</span>
+                </li>
+              ))}
+              {logs.length === 0 && <li>No recent logs.</li>}
+            </ul>
+          </section>
+        </div>
+
+        {/* Settings Tab */}
+        <div style={{ display: activeTab === "Settings" ? 'block' : 'none' }}>
+          <section className="dashboard-settings glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div>
+              <h2>System Management</h2>
+              <p style={{ color: 'var(--text-secondary)' }}>Manage your branches and employee access.</p>
+            </div>
+            
+            <div>
+              <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent-color)' }}>Outlets & Branches</h3>
+              <OutletManager />
+            </div>
+
+            <div>
+              <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--accent-color)' }}>Staff & Managers</h3>
+              <UserManager />
+            </div>
+          </section>
+        </div>
       </main>
     </div>
   );

@@ -13,52 +13,82 @@ export async function GET() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Aggregate total revenue for today
-    const revenueAgg = await prisma.bill.aggregate({
-      _sum: { finalAmount: true },
-      where: { 
-        status: "PAID",
-        createdAt: { gte: today }
-      },
-    });
+    // Execute all 7 queries concurrently to avoid sequential round-trip latency to remote DB
+    const [
+      revenueAgg,
+      payments,
+      totalBills,
+      activeShifts,
+      outlets,
+      recentLogs,
+      recentBills
+    ] = await Promise.all([
+      // 1. Total revenue for today
+      prisma.bill.aggregate({
+        _sum: { finalAmount: true },
+        where: { 
+          status: "PAID",
+          createdAt: { gte: today }
+        },
+      }),
+
+      // 2. Payments for today
+      prisma.payment.findMany({
+        where: {
+          createdAt: { gte: today },
+          status: "COMPLETED"
+        }
+      }),
+
+      // 3. Count bills for today
+      prisma.bill.count({
+        where: { 
+          status: "PAID",
+          createdAt: { gte: today }
+        },
+      }),
+
+      // 4. Count active shifts
+      prisma.managerShift.count({
+        where: { status: "ACTIVE" },
+      }),
+
+      // 5. Outlets with today's revenue
+      prisma.outlet.findMany({
+        include: {
+          bills: {
+            where: { 
+              status: "PAID",
+              createdAt: { gte: today }
+            },
+            select: { finalAmount: true }
+          }
+        }
+      }),
+
+      // 6. Recent audit logs
+      prisma.auditLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+
+      // 7. Recent bills globally for today
+      prisma.bill.findMany({
+        where: {
+          createdAt: { gte: today }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        include: {
+          outlet: { select: { name: true } },
+          creator: { select: { name: true } }
+        }
+      })
+    ]);
+
     const totalRevenue = revenueAgg._sum.finalAmount || 0;
-
-    // Aggregate payments by method for today
-    const payments = await prisma.payment.findMany({
-      where: {
-        createdAt: { gte: today },
-        status: "COMPLETED"
-      }
-    });
-
     const cashPayments = payments.filter(p => p.method === "CASH").reduce((sum, p) => sum + p.amount, 0);
     const onlinePayments = payments.filter(p => p.method === "ONLINE").reduce((sum, p) => sum + p.amount, 0);
-
-    // Count bills for today
-    const totalBills = await prisma.bill.count({
-      where: { 
-        status: "PAID",
-        createdAt: { gte: today }
-      },
-    });
-
-    // Count active shifts
-    const activeShifts = await prisma.managerShift.count({
-      where: { status: "ACTIVE" },
-    });
-
-    // Get outlets and calculate today's revenue per outlet
-    const outlets = await prisma.outlet.findMany({
-      include: {
-        bills: {
-          where: { 
-            status: "PAID",
-            createdAt: { gte: today }
-          },
-          select: { finalAmount: true }
-        }
-      }
-    });
 
     const outletsWithRevenue = outlets.map(outlet => {
       const revenue = outlet.bills.reduce((sum, bill) => sum + bill.finalAmount, 0);
@@ -67,25 +97,6 @@ export async function GET() {
         name: outlet.name,
         revenue,
       };
-    });
-
-    // Get recent audit logs
-    const recentLogs = await prisma.auditLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    });
-
-    // Get recent bills globally (for today only)
-    const recentBills = await prisma.bill.findMany({
-      where: {
-        createdAt: { gte: today }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100, // up to 100 today
-      include: {
-        outlet: { select: { name: true } },
-        creator: { select: { name: true } }
-      }
     });
 
     return NextResponse.json({

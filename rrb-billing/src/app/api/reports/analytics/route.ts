@@ -30,7 +30,11 @@ export async function GET(req: Request) {
       },
       include: {
         items: {
-          include: { menuItem: true }
+          include: {
+            menuItem: {
+              select: { id: true, name: true, categoryId: true }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'asc' }

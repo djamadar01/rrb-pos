@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -37,7 +37,7 @@ export default function POSPage() {
     return menu.filter(item => item.categoryId === selectedCategory.id);
   }, [menu, selectedCategory]);
 
-  const fetchRecentBills = async (currentOutletId: string) => {
+  const fetchRecentBills = useCallback(async (currentOutletId: string) => {
     try {
       const res = await fetch(`/api/bills/recent?outletId=${currentOutletId}`);
       const data = await res.json();
@@ -45,35 +45,36 @@ export default function POSPage() {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
+  // Fetch menu, categories, and outlet ONCE concurrently on mount when authenticated
   useEffect(() => {
     if (status !== "authenticated") return;
-    // Fetch menu
-    fetch("/api/menu").then(res => res.json()).then(data => {
-      if (Array.isArray(data)) setMenu(data.filter((item: any) => item.isActive));
-    });
-    // Fetch categories
-    fetch("/api/categories").then(res => res.json()).then(data => {
-      if (Array.isArray(data)) setCategories(data);
-    });
-    // Fetch outlet & shift
-    fetch("/api/outlets").then(res => res.json()).then(data => {
-      if (Array.isArray(data) && data.length > 0) {
-        setOutlet(data[0]); // For demo, pick first outlet
-        fetchRecentBills(data[0].id);
-      }
-    });
+    let isMounted = true;
 
-    // Keyboard shortcuts listener
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "F1") { e.preventDefault(); console.log("Focus menu"); }
-      if (e.key === "F4") { e.preventDefault(); handleCheckout(); }
-      if (e.key === "F5") { e.preventDefault(); handleRazorpayCheckout(); }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cart, outlet]); // Added dependencies to allow handleCheckout to get latest state
+    Promise.all([
+      fetch("/api/menu").then(res => res.json()),
+      fetch("/api/categories").then(res => res.json()),
+      fetch("/api/outlets").then(res => res.json())
+    ]).then(([menuData, catData, outletsData]) => {
+      if (!isMounted) return;
+      if (Array.isArray(menuData)) setMenu(menuData.filter((item: any) => item.isActive));
+      if (Array.isArray(catData)) setCategories(catData);
+      if (Array.isArray(outletsData) && outletsData.length > 0) {
+        setOutlet(outletsData[0]);
+        fetchRecentBills(outletsData[0].id);
+      }
+    }).catch(console.error);
+
+    return () => { isMounted = false; };
+  }, [status, fetchRecentBills]);
+
+  // Re-fetch recent bills when switching to Recent Bills tab
+  useEffect(() => {
+    if (activeTab === "Recent Bills" && outlet?.id) {
+      fetchRecentBills(outlet.id);
+    }
+  }, [activeTab, outlet?.id, fetchRecentBills]);
 
   const addToCart = (item: any) => {
     setCart(prev => {
@@ -238,6 +239,21 @@ export default function POSPage() {
     }
   };
 
+  const handleCheckoutRef = useRef(handleCheckout);
+  handleCheckoutRef.current = handleCheckout;
+  const handleRazorpayCheckoutRef = useRef(handleRazorpayCheckout);
+  handleRazorpayCheckoutRef.current = handleRazorpayCheckout;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F1") { e.preventDefault(); setActiveTab("Menu"); }
+      if (e.key === "F4") { e.preventDefault(); handleCheckoutRef.current(); }
+      if (e.key === "F5") { e.preventDefault(); handleRazorpayCheckoutRef.current(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const viewBill = async (billId: string) => {
     try {
       const res = await fetch(`/api/bills/${billId}`);
@@ -354,216 +370,219 @@ export default function POSPage() {
       </aside>
 
       <main className="dashboard-main-content">
-        {activeTab === "Menu" && (
-          <div className="pos-main" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <section className="pos-menu glass-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2>Menu (F1)</h2>
-                {selectedCategory && (
-                  <button onClick={() => setSelectedCategory(null)} className="btn-primary" style={{ padding: '0.5rem 1rem', background: '#334155' }}>
-                    &larr; Back to Categories
-                  </button>
+        <div className="pos-main" style={{ display: activeTab === "Menu" ? 'flex' : 'none', flexDirection: 'column', flex: 1 }}>
+          <section className="pos-menu glass-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2>Menu (F1)</h2>
+              {selectedCategory && (
+                <button onClick={() => setSelectedCategory(null)} className="btn-primary" style={{ padding: '0.5rem 1rem', background: '#334155' }}>
+                  &larr; Back to Categories
+                </button>
+              )}
+            </div>
+            
+            {!selectedCategory ? (
+              <div className="menu-grid">
+              {categories.map(cat => (
+                <button 
+                  key={cat.id} 
+                  className="category-btn"
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{ 
+                    padding: '1rem', 
+                    borderRadius: '8px', 
+                    border: 'none', 
+                    background: selectedCategory?.id === cat.id ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', 
+                    color: selectedCategory?.id === cat.id ? 'var(--bg-primary)' : 'var(--text-primary)', 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  {cat.imageUrl ? (
+                    <img src={cat.imageUrl} alt={cat.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🏷️</div>
+                  )}
+                  <span>{cat.name}</span>
+                </button>
+              ))}
+            </div>
+            ) : (
+              <div className="menu-grid" style={{ paddingBottom: '80px' }}>
+                {itemsToShow.map((item) => {
+                  const qty = getCartQuantity(item.id);
+                  const cartId = getCartId(item.id);
+                  
+                  return (
+                    <div 
+                      key={item.id} 
+                      className="menu-item-card glass-panel"
+                      style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+                    >
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '120px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🍽️</div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                        <span className="item-name" style={{ fontWeight: 'bold' }}>{item.name}</span>
+                        <span className="item-price" style={{ color: 'var(--accent-color)' }}>₹{item.price.toFixed(2)}</span>
+                      </div>
+                      
+                      <div style={{ marginTop: '0.5rem' }}>
+                        {qty === 0 ? (
+                          <button 
+                            onClick={() => addToCart(item)}
+                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            + ADD
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <button onClick={() => updateQuantity(cartId!, -1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                            <span style={{ fontWeight: 'bold' }}>{qty}</span>
+                            <button onClick={() => updateQuantity(cartId!, 1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+          
+          {/* Floating Review Bill Button */}
+          {cart.length > 0 && (
+            <div style={{
+              position: 'fixed',
+              bottom: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 'calc(100% - 40px)',
+              maxWidth: '400px',
+              zIndex: 50
+            }}>
+              <button 
+                className="btn-primary" 
+                onClick={() => setActiveTab("Current Bill")}
+                style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--accent-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', fontSize: '1.1rem' }}
+              >
+                <span>{cart.length} Item{cart.length > 1 ? 's' : ''} added</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  View Bill &rarr;
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="pos-main" style={{ display: activeTab === "Current Bill" ? 'flex' : 'none', gap: '1rem', flex: 1, flexDirection: 'column' }}>
+          <section className="pos-cart glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
+            <div>
+              <h2>{t("currentBill")}</h2>
+              <div className="cart-items">
+                {cart.map((item, index) => (
+                  <div key={item.cartId} className="cart-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <span>{item.name}</span>
+                      <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>₹{item.price.toFixed(2)} {t("each")}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <button onClick={() => updateQuantity(item.cartId, -1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>-</button>
+                      <span>{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.cartId, 1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>+</button>
+                      <button onClick={() => removeFromCart(item.cartId)} style={{ marginLeft: '0.5rem', padding: '0.2rem 0.5rem', background: 'var(--danger-color)', color: 'white', border: 'none', borderRadius: '4px' }}>X</button>
+                    </div>
+                    <span style={{ marginLeft: '1rem', minWidth: '40px', textAlign: 'right' }}>₹{(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+                {cart.length === 0 && (
+                  <div style={{ textAlign: 'center', opacity: 0.5, padding: '2rem 0' }}>No items in bill yet.</div>
                 )}
               </div>
               
-              {!selectedCategory ? (
-                <div className="menu-grid">
-                {categories.map(cat => (
-                  <button 
-                    key={cat.id} 
-                    className="category-btn"
-                    onClick={() => setSelectedCategory(cat)}
-                    style={{ 
-                      padding: '1rem', 
-                      borderRadius: '8px', 
-                      border: 'none', 
-                      background: selectedCategory?.id === cat.id ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)', 
-                      color: selectedCategory?.id === cat.id ? 'var(--bg-primary)' : 'var(--text-primary)', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
-                  >
-                    {cat.imageUrl ? (
-                      <img src={cat.imageUrl} alt={cat.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🏷️</div>
-                    )}
-                    <span>{cat.name}</span>
-                  </button>
-                ))}
-              </div>
-              ) : (
-                <div className="menu-grid" style={{ paddingBottom: '80px' }}>
-                  {itemsToShow.map((item) => {
-                    const qty = getCartQuantity(item.id);
-                    const cartId = getCartId(item.id);
-                    
-                    return (
-                      <div 
-                        key={item.id} 
-                        className="menu-item-card glass-panel"
-                        style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-                      >
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '120px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🍽️</div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                          <span className="item-name" style={{ fontWeight: 'bold' }}>{item.name}</span>
-                          <span className="item-price" style={{ color: 'var(--accent-color)' }}>₹{item.price.toFixed(2)}</span>
-                        </div>
-                        
-                        <div style={{ marginTop: '0.5rem' }}>
-                          {qty === 0 ? (
-                            <button 
-                              onClick={() => addToCart(item)}
-                              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold' }}
-                            >
-                              + ADD
-                            </button>
-                          ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                              <button onClick={() => updateQuantity(cartId!, -1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                              <span style={{ fontWeight: 'bold' }}>{qty}</span>
-                              <button onClick={() => updateQuantity(cartId!, 1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="cart-summary">
+                <div className="summary-row">
+                  <span>{t("subtotal")}:</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
-              )}
-            </section>
-            
-            {/* Floating Review Bill Button */}
-            {cart.length > 0 && (
-              <div style={{
-                position: 'fixed',
-                bottom: '20px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 'calc(100% - 40px)',
-                maxWidth: '400px',
-                zIndex: 50
-              }}>
-                <button 
-                  className="btn-primary" 
-                  onClick={() => setActiveTab("Current Bill")}
-                  style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--accent-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', fontSize: '1.1rem' }}
-                >
-                  <span>{cart.length} Item{cart.length > 1 ? 's' : ''} added</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    View Bill &rarr;
-                  </span>
+                <div className="summary-row total-row">
+                  <span>{t("total")}:</span>
+                  <span>₹{total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="cart-actions" style={{ marginTop: '1rem' }}>
+                <button className="btn-primary action-btn" onClick={handleCheckout} disabled={isProcessing || cart.length === 0}>
+                  {isProcessing ? "Processing..." : t("payCash")}
+                </button>
+                <button className="btn-primary action-btn" onClick={handleRazorpayCheckout} disabled={isProcessing || cart.length === 0}>
+                  {isProcessing ? "Processing..." : t("payOnline")}
                 </button>
               </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "Current Bill" && (
-          <div className="pos-main" style={{ display: 'flex', gap: '1rem', flex: 1, flexDirection: 'column' }}>
-            <section className="pos-cart glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
-              <div>
-                <h2>{t("currentBill")}</h2>
-                <div className="cart-items">
-                  {cart.map((item, index) => (
-                    <div key={item.cartId} className="cart-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ flex: 1 }}>
-                        <span>{item.name}</span>
-                        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>₹{item.price.toFixed(2)} {t("each")}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <button onClick={() => updateQuantity(item.cartId, -1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>-</button>
-                        <span>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.cartId, 1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>+</button>
-                        <button onClick={() => removeFromCart(item.cartId)} style={{ marginLeft: '0.5rem', padding: '0.2rem 0.5rem', background: 'var(--danger-color)', color: 'white', border: 'none', borderRadius: '4px' }}>X</button>
-                      </div>
-                      <span style={{ marginLeft: '1rem', minWidth: '40px', textAlign: 'right' }}>₹{(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                  {cart.length === 0 && (
-                    <div style={{ textAlign: 'center', opacity: 0.5, padding: '2rem 0' }}>No items in bill yet.</div>
-                  )}
-                </div>
-                
-                <div className="cart-summary">
-                  <div className="summary-row">
-                    <span>{t("subtotal")}:</span>
-                    <span>₹{total.toFixed(2)}</span>
-                  </div>
-                  <div className="summary-row total-row">
-                    <span>{t("total")}:</span>
-                    <span>₹{total.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                <div className="cart-actions" style={{ marginTop: '1rem' }}>
-                  <button className="btn-primary action-btn" onClick={handleCheckout} disabled={isProcessing || cart.length === 0}>
-                    {isProcessing ? "Processing..." : t("payCash")}
-                  </button>
-                  <button className="btn-primary action-btn" onClick={handleRazorpayCheckout} disabled={isProcessing || cart.length === 0}>
-                    {isProcessing ? "Processing..." : t("payOnline")}
-                  </button>
-                </div>
-                
-                <div style={{ marginTop: '1rem' }}>
-                   <button className="btn-primary" onClick={() => setActiveTab("Menu")} style={{ width: '100%', background: '#334155' }}>
-                     + Add More Items
-                   </button>
-                </div>
+              
+              <div style={{ marginTop: '1rem' }}>
+                 <button className="btn-primary" onClick={() => setActiveTab("Menu")} style={{ width: '100%', background: '#334155' }}>
+                   + Add More Items
+                 </button>
               </div>
-            </section>
-          </div>
-        )}
+            </div>
+          </section>
+        </div>
 
-        {activeTab === "Recent Bills" && (
-          <div className="pos-main" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
-            <section className="glass-panel" style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+        <div className="pos-main" style={{ display: activeTab === "Recent Bills" ? 'flex' : 'none', flexDirection: 'column', gap: '1rem', flex: 1 }}>
+          <section className="glass-panel" style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2>{t("recentBills")}</h2>
-              <div className="recent-bills-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-                {recentBills.map(bill => (
-                  <div 
-                    key={bill.id} 
-                    onClick={() => viewBill(bill.id)}
-                    style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <span style={{ fontWeight: 'bold' }}>{bill.billNumber}</span>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        {new Date(bill.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-                      <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>₹{bill.finalAmount.toFixed(2)}</span>
-                      <span className={`badge ${bill.status === 'PAID' ? 'success' : 'danger'}`} style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem' }}>
-                        {bill.status}
-                      </span>
-                    </div>
+              {outlet?.id && (
+                <button 
+                  onClick={() => fetchRecentBills(outlet.id)} 
+                  className="btn-primary" 
+                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#334155' }}
+                >
+                  🔄 Refresh
+                </button>
+              )}
+            </div>
+            <div className="recent-bills-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+              {recentBills.map(bill => (
+                <div 
+                  key={bill.id} 
+                  onClick={() => viewBill(bill.id)}
+                  style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{ fontWeight: 'bold' }}>{bill.billNumber}</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      {new Date(bill.createdAt).toLocaleString()}
+                    </span>
                   </div>
-                ))}
-                {recentBills.length === 0 && (
-                  <div style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>{t("noBillsYet")}</div>
-                )}
-              </div>
-            </section>
-          </div>
-        )}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                    <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>₹{bill.finalAmount.toFixed(2)}</span>
+                    <span className={`badge ${bill.status === 'PAID' ? 'success' : 'danger'}`} style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem' }}>
+                      {bill.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {recentBills.length === 0 && (
+                <div style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>{t("noBillsYet")}</div>
+              )}
+            </div>
+          </section>
+        </div>
 
-        {activeTab === "Menu Management" && (
-          <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
-            <h2>Menu Management</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>Manage dishes and categories for this outlet.</p>
-            <MenuManager />
-          </div>
-        )}
+        <div className="glass-panel" style={{ display: activeTab === "Menu Management" ? 'flex' : 'none', padding: '2rem', flexDirection: 'column', gap: '1rem', flex: 1 }}>
+          <h2>Menu Management</h2>
+          <p style={{ color: 'var(--text-secondary)' }}>Manage dishes and categories for this outlet.</p>
+          <MenuManager />
+        </div>
       </main>
 
       {/* Bill View Modal (Kept as a modal since it pops over everything) */}

@@ -9,7 +9,9 @@ export async function GET(req: Request, { params }: { params: any }) {
       include: {
         items: {
           include: {
-            menuItem: true
+            menuItem: {
+              select: { id: true, name: true, price: true }
+            }
           }
         },
         outlet: true,

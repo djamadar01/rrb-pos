@@ -98,7 +98,9 @@ export async function POST(req: Request) {
       include: {
         items: {
           include: {
-            menuItem: true
+            menuItem: {
+              select: { id: true, name: true, price: true }
+            }
           }
         },
         outlet: true,

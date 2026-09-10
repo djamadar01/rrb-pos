@@ -44,6 +44,9 @@ model ManagerShift {
   endTime   DateTime?
   status    String @default("ACTIVE")
   bills     Bill[]
+
+  @@index([status])
+  @@index([outletId])
 }
 
 model Category {
@@ -64,6 +67,9 @@ model MenuItem {
   isActive   Boolean        @default(true)
   modifiers  ItemModifier[]
   billItems  BillItem[]
+
+  @@index([categoryId])
+  @@index([isActive])
 }
 
 model ItemModifier {
@@ -97,6 +103,9 @@ model Bill {
   payments       Payment[]
 
   @@unique([outletId, billNumber])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([outletId, createdAt])
 }
 
 model BillItem {
@@ -109,6 +118,9 @@ model BillItem {
   unitPrice  Float              
   subtotal   Float              
   modifiers  BillItemModifier[]
+
+  @@index([billId])
+  @@index([menuItemId])
 }
 
 model BillItemModifier {
@@ -129,6 +141,9 @@ model Payment {
   status        String
   transactionId String?
   createdAt     DateTime      @default(now())
+
+  @@index([createdAt, status])
+  @@index([billId])
 }
 
 model AuditLog {
@@ -142,4 +157,6 @@ model AuditLog {
   details    String
   ipAddress  String
   createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
