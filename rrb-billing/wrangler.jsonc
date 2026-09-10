@@ -17,6 +17,7 @@
     }
   ],
   "vars": {
+    "NEXTAUTH_URL": "https://rrb-pos.djamadar01.workers.dev",
     "NEXTAUTH_SECRET": "super-secret-key-1234567890-rrb-billing"
   }
 }

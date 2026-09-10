@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -117,14 +118,27 @@ export default function LoginPage() {
           e.preventDefault();
           setLoading(true);
           setError("");
-          const res = await signIn("credentials", {
-            email,
-            password,
-            redirect: true,
-            callbackUrl: "/"
-          });
-          if (res?.error) {
-            setError(res.error);
+          try {
+            const res = await signIn("credentials", {
+              email: email.trim().toLowerCase(),
+              password,
+              redirect: false,
+            });
+
+            if (res?.error) {
+              setError("Invalid email or password. Please try again.");
+              setLoading(false);
+            } else if (res?.ok) {
+              const searchParams = new URLSearchParams(window.location.search);
+              const target = searchParams.get("callbackUrl") || "/";
+              router.push(target);
+              router.refresh();
+            } else {
+              setLoading(false);
+            }
+          } catch (err: any) {
+            console.error("Sign-in error:", err);
+            setError("Login failed. Please check your credentials.");
             setLoading(false);
           }
         }}>

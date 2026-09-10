@@ -5,6 +5,7 @@ import { authenticator } from "otplib";
 import { prisma } from "./prisma";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || "super-secret-key-1234567890-rrb-billing",
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 Days
