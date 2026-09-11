@@ -55,18 +55,28 @@ export async function POST(req: Request) {
     const itemIds = items.map((i: any) => i.menuItemId).filter(Boolean);
     const dbItems = await prisma.menuItem.findMany({
       where: { id: { in: itemIds } },
-      select: { id: true, price: true }
+      select: { id: true, price: true, halfPrice: true }
     });
-    const priceMap = new Map(dbItems.map((d: any) => [d.id, d.price]));
+    const priceMap = new Map(dbItems.map((d: any) => [d.id, d]));
 
     let verifiedSubtotal = 0;
     const validatedItems = items.map((item: any) => {
-      const realUnitPrice = priceMap.has(item.menuItemId) ? priceMap.get(item.menuItemId)! : (item.unitPrice || 0);
+      const dbItem = priceMap.get(item.menuItemId);
+      let realUnitPrice = item.unitPrice || 0;
+      const portion = item.portion === "HALF" ? "HALF" : "FULL";
+      if (dbItem) {
+        if (portion === "HALF" && dbItem.halfPrice != null && dbItem.halfPrice > 0) {
+          realUnitPrice = dbItem.halfPrice;
+        } else {
+          realUnitPrice = dbItem.price;
+        }
+      }
       const qty = Math.max(1, parseInt(item.quantity) || 1);
       const itemSubtotal = realUnitPrice * qty;
       verifiedSubtotal += itemSubtotal;
       return {
         ...item,
+        portion,
         quantity: qty,
         unitPrice: realUnitPrice,
         subtotal: itemSubtotal
@@ -107,6 +117,7 @@ export async function POST(req: Request) {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             subtotal: item.subtotal,
+            portion: item.portion || "FULL",
             modifiers: {
               create: item.modifiers?.map((mod: any) => ({
                 modifierId: mod.modifierId,

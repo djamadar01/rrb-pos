@@ -12,7 +12,7 @@ export default function MenuManager() {
   const [isLoading, setIsLoading] = useState(true);
 
   // New Dish State
-  const [newItem, setNewItem] = useState({ name: "", price: "", categoryId: "", imageUrl: "" });
+  const [newItem, setNewItem] = useState({ name: "", price: "", halfPrice: "", categoryId: "", imageUrl: "" });
   const [newDishImage, setNewDishImage] = useState<File | null>(null);
 
   // New Category State
@@ -23,7 +23,7 @@ export default function MenuManager() {
   
   // Edit State
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editItemData, setEditItemData] = useState({ name: "", price: "", categoryId: "", imageUrl: "" });
+  const [editItemData, setEditItemData] = useState({ name: "", price: "", halfPrice: "", categoryId: "", imageUrl: "" });
 
   const fetchData = async () => {
     try {
@@ -178,7 +178,7 @@ export default function MenuManager() {
       });
       
       if (res.ok) {
-        setNewItem({ name: "", price: "", categoryId: "", imageUrl: "" });
+        setNewItem({ name: "", price: "", halfPrice: "", categoryId: "", imageUrl: "" });
         setNewDishImage(null);
         fetchData();
       } else {
@@ -198,6 +198,7 @@ export default function MenuManager() {
     setEditItemData({ 
       name: item.name, 
       price: item.price.toString(), 
+      halfPrice: item.halfPrice != null ? item.halfPrice.toString() : "",
       categoryId: item.categoryId || "", 
       imageUrl: item.imageUrl || "" 
     });
@@ -213,9 +214,8 @@ export default function MenuManager() {
           id: item.id, 
           name: editItemData.name, 
           price: editItemData.price, 
+          halfPrice: editItemData.halfPrice,
           categoryId: editItemData.categoryId,
-          // Not handling image update inline for simplicity, 
-          // just keeping the old one unless we wanted to add a file input here too.
         })
       });
       if (res.ok) {
@@ -322,13 +322,17 @@ export default function MenuManager() {
           <section className="add-dish glass-panel" style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.2)' }}>
             <h3 style={{ marginBottom: '1rem' }}>Add New Dish</h3>
             <form onSubmit={handleAddDish} className="mobile-stack-form" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 2, minWidth: '200px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 2, minWidth: '180px' }}>
                 <label>Dish Name</label>
-                <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+                <input type="text" required placeholder="e.g. Veg Fried Rice" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '100px' }}>
-                <label>Price (₹)</label>
-                <input type="number" step="0.01" required value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '110px' }}>
+                <label>Full Rate (₹)</label>
+                <input type="number" step="0.01" required placeholder="e.g. 120" value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '110px' }}>
+                <label>Half Rate (₹) <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>(Optional)</span></label>
+                <input type="number" step="0.01" placeholder="e.g. 70" value={newItem.halfPrice} onChange={e => setNewItem({...newItem, halfPrice: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
                 <label>Category</label>
@@ -344,7 +348,7 @@ export default function MenuManager() {
                   ))}
                 </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '200px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '180px' }}>
                 <label>Dish Image</label>
                 <input type="file" accept="image/*" onChange={e => setNewDishImage(e.target.files?.[0] || null)} style={{ padding: '0.6rem', color: 'white' }} />
               </div>
@@ -359,24 +363,34 @@ export default function MenuManager() {
 
           <section className="dish-list">
             <h3 style={{ marginBottom: '1rem' }}>Existing Dishes</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
               {menu.map(item => (
                 <div key={item.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: item.isActive ? 1 : 0.5 }}>
                   {editingItemId === item.id ? (
                     <>
                       <input type="text" value={editItemData.name} onChange={e => setEditItemData({...editItemData, name: e.target.value})} style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }} />
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="number" step="0.01" value={editItemData.price} onChange={e => setEditItemData({...editItemData, price: e.target.value})} style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white', flex: 1 }} />
-                        <select 
-                          value={editItemData.categoryId} 
-                          onChange={e => setEditItemData({...editItemData, categoryId: e.target.value})} 
-                          style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white', flex: 1 }}
-                        >
-                          <option value="">Select Category</option>
-                          {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                          ))}
-                        </select>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: '80px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Full (₹)</label>
+                          <input type="number" step="0.01" placeholder="Full (₹)" value={editItemData.price} onChange={e => setEditItemData({...editItemData, price: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '80px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Half (₹)</label>
+                          <input type="number" step="0.01" placeholder="Half (₹)" value={editItemData.halfPrice} onChange={e => setEditItemData({...editItemData, halfPrice: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '120px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Category</label>
+                          <select 
+                            value={editItemData.categoryId} 
+                            onChange={e => setEditItemData({...editItemData, categoryId: e.target.value})} 
+                            style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }}
+                          >
+                            <option value="">Select Category</option>
+                            {categories.map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                         <button onClick={() => saveEdit(item)} className="btn-primary" style={{ flex: 1, padding: '0.5rem' }}>Save</button>
@@ -393,9 +407,17 @@ export default function MenuManager() {
                              <div style={{ width: '50px', height: '50px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>No Img</div>
                           )}
                           <div>
-                            <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                              ₹{item.price.toFixed(2)} &bull; {item.category?.name || "Unknown"}
+                            <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{item.name}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                              <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                                Full: ₹{item.price.toFixed(2)}
+                              </span>
+                              {item.halfPrice != null && item.halfPrice > 0 && (
+                                <span style={{ color: '#60a5fa', fontWeight: 600 }}>
+                                  Half: ₹{item.halfPrice.toFixed(2)}
+                                </span>
+                              )}
+                              <span>&bull; {item.category?.name || "Unknown"}</span>
                             </div>
                           </div>
                         </div>

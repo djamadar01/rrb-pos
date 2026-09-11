@@ -63,6 +63,7 @@ model MenuItem {
   id         String         @id @default(uuid())
   name       String
   price      Float        
+  halfPrice  Float?
   categoryId String?
   category   Category?      @relation(fields: [categoryId], references: [id])
   imageUrl   String?
@@ -119,6 +120,7 @@ model BillItem {
   quantity   Int
   unitPrice  Float              
   subtotal   Float              
+  portion    String?              @default("FULL")
   modifiers  BillItemModifier[]
 
   @@index([billId])

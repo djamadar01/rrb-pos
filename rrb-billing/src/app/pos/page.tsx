@@ -195,23 +195,40 @@ export default function POSPage() {
     }
   }, [activeTab, outlet?.id, fetchRecentBills]);
 
-  const addToCart = (item: any) => {
+  const addToCart = (item: any, portion: "FULL" | "HALF" = "FULL") => {
+    const itemPrice = (portion === "HALF" && item.halfPrice != null && item.halfPrice > 0) 
+      ? item.halfPrice 
+      : item.price;
+    const itemCartKey = `${item.id}-${portion}`;
+    
     setCart(prev => {
-      const existing = prev.find(i => i.id === item.id);
+      const existing = prev.find(i => i.cartKey === itemCartKey);
       if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map(i => i.cartKey === itemCartKey ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { ...item, cartId: Date.now(), quantity: 1 }];
+      return [
+        ...prev, 
+        { 
+          ...item, 
+          cartId: Date.now() + Math.random(), 
+          cartKey: itemCartKey,
+          portion,
+          price: itemPrice, 
+          quantity: 1 
+        }
+      ];
     });
   };
 
-  const getCartQuantity = (itemId: string) => {
-    const existing = cart.find(i => i.id === itemId);
+  const getCartQuantity = (itemId: string, portion: "FULL" | "HALF" = "FULL") => {
+    const itemCartKey = `${itemId}-${portion}`;
+    const existing = cart.find(i => i.cartKey === itemCartKey);
     return existing ? existing.quantity : 0;
   };
   
-  const getCartId = (itemId: string) => {
-    const existing = cart.find(i => i.id === itemId);
+  const getCartId = (itemId: string, portion: "FULL" | "HALF" = "FULL") => {
+    const itemCartKey = `${itemId}-${portion}`;
+    const existing = cart.find(i => i.cartKey === itemCartKey);
     return existing ? existing.cartId : null;
   };
 
@@ -260,6 +277,7 @@ export default function POSPage() {
           paymentMethod: "CASH",
           items: cart.map(item => ({
             menuItemId: item.id,
+            portion: item.portion || "FULL",
             quantity: item.quantity,
             unitPrice: item.price,
             subtotal: item.price * item.quantity,
@@ -332,6 +350,7 @@ export default function POSPage() {
           paymentMethod: "ONLINE",
           items: cart.map(item => ({
             menuItemId: item.id,
+            portion: item.portion || "FULL",
             quantity: item.quantity,
             unitPrice: item.price,
             subtotal: item.price * item.quantity,
@@ -402,7 +421,8 @@ export default function POSPage() {
     text += `----------------------\n`;
     
     selectedBill.items.forEach((item: any) => {
-       const name = item.menuItem?.name || item.name;
+       const portionTag = item.portion ? ` (${item.portion === 'HALF' ? 'Half' : 'Full'})` : '';
+       const name = (item.menuItem?.name || item.name) + portionTag;
        text += `${name}\n`;
        text += `${item.quantity} x Rs.${(item.subtotal/item.quantity).toFixed(2)} = Rs.${item.subtotal.toFixed(2)}\n`;
     });
@@ -597,24 +617,71 @@ export default function POSPage() {
                         ) : (
                           <div style={{ width: '100%', height: '120px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🍽️</div>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                          <span className="item-name" style={{ fontWeight: 'bold' }}>{item.name}</span>
-                          <span className="item-price" style={{ color: 'var(--accent-color)' }}>₹{item.price.toFixed(2)}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start', flexDirection: 'column', gap: '0.2rem' }}>
+                          <span className="item-name" style={{ fontWeight: 'bold', fontSize: '1rem' }}>{item.name}</span>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
+                            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>Full: ₹{item.price.toFixed(2)}</span>
+                            {item.halfPrice != null && item.halfPrice > 0 && (
+                              <span style={{ color: '#60a5fa', fontWeight: 600 }}>Half: ₹{item.halfPrice.toFixed(2)}</span>
+                            )}
+                          </div>
                         </div>
                         
                         <div style={{ marginTop: '0.5rem' }}>
-                          {qty === 0 ? (
-                            <button 
-                              onClick={() => addToCart(item)}
-                              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold' }}
-                            >
-                              + ADD
-                            </button>
+                          {item.halfPrice != null && item.halfPrice > 0 ? (
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              {/* Full Button */}
+                              <div style={{ flex: 1 }}>
+                                {getCartQuantity(item.id, "FULL") === 0 ? (
+                                  <button 
+                                    onClick={() => addToCart(item, "FULL")}
+                                    style={{ width: '100%', padding: '0.45rem 0.2rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+                                  >
+                                    + Full (₹{item.price})
+                                  </button>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(212, 175, 55, 0.2)', border: '1px solid var(--accent-color)', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <button onClick={() => updateQuantity(getCartId(item.id, "FULL")!, -1)} style={{ padding: '0.4rem 0.5rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                                    <span style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{getCartQuantity(item.id, "FULL")} F</span>
+                                    <button onClick={() => updateQuantity(getCartId(item.id, "FULL")!, 1)} style={{ padding: '0.4rem 0.5rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Half Button */}
+                              <div style={{ flex: 1 }}>
+                                {getCartQuantity(item.id, "HALF") === 0 ? (
+                                  <button 
+                                    onClick={() => addToCart(item, "HALF")}
+                                    style={{ width: '100%', padding: '0.45rem 0.2rem', borderRadius: '4px', border: '1px solid #3b82f6', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+                                  >
+                                    + Half (₹{item.halfPrice})
+                                  </button>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <button onClick={() => updateQuantity(getCartId(item.id, "HALF")!, -1)} style={{ padding: '0.4rem 0.5rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                                    <span style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{getCartQuantity(item.id, "HALF")} H</span>
+                                    <button onClick={() => updateQuantity(getCartId(item.id, "HALF")!, 1)} style={{ padding: '0.4rem 0.5rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                              <button onClick={() => updateQuantity(cartId!, -1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                              <span style={{ fontWeight: 'bold' }}>{qty}</span>
-                              <button onClick={() => updateQuantity(cartId!, 1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                            <div>
+                              {getCartQuantity(item.id, "FULL") === 0 ? (
+                                <button 
+                                  onClick={() => addToCart(item, "FULL")}
+                                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold' }}
+                                >
+                                  + ADD
+                                </button>
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                                  <button onClick={() => updateQuantity(getCartId(item.id, "FULL")!, -1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                                  <span style={{ fontWeight: 'bold' }}>{getCartQuantity(item.id, "FULL")}</span>
+                                  <button onClick={() => updateQuantity(getCartId(item.id, "FULL")!, 1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -659,12 +726,24 @@ export default function POSPage() {
                 {cart.map((item, index) => (
                   <div key={item.cartId} className="cart-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ flex: 1 }}>
-                      <span>{item.name}</span>
-                      <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>₹{item.price.toFixed(2)} {t("each")}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600 }}>{item.name}</span>
+                        <span style={{ 
+                          fontSize: '0.7rem', 
+                          fontWeight: 'bold',
+                          padding: '1px 5px', 
+                          borderRadius: '3px',
+                          background: item.portion === 'HALF' ? '#2563eb' : 'var(--accent-color)',
+                          color: item.portion === 'HALF' ? 'white' : 'var(--bg-primary)'
+                        }}>
+                          {item.portion === 'HALF' ? 'Half' : 'Full'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.2rem' }}>₹{item.price.toFixed(2)} {t("each")}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <button onClick={() => updateQuantity(item.cartId, -1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>-</button>
-                      <span>{item.quantity}</span>
+                      <span style={{ fontWeight: 'bold' }}>{item.quantity}</span>
                       <button onClick={() => updateQuantity(item.cartId, 1)} style={{ padding: '0.2rem 0.5rem', background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', border: 'none', borderRadius: '4px' }}>+</button>
                       <button onClick={() => removeFromCart(item.cartId)} style={{ marginLeft: '0.5rem', padding: '0.2rem 0.5rem', background: 'var(--danger-color)', color: 'white', border: 'none', borderRadius: '4px' }}>X</button>
                     </div>
@@ -784,13 +863,17 @@ export default function POSPage() {
                   <span style={{ flex: 1, textAlign: 'center' }}>{t("qty")}</span>
                   <span style={{ flex: 1, textAlign: 'right' }}>{t("amt")}</span>
                 </div>
-                {selectedBill.items.map((item: any) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                    <span style={{ flex: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.menuItem?.name || item.name}</span>
-                    <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
-                    <span style={{ flex: 1, textAlign: 'right' }}>₹{item.subtotal.toFixed(2)}</span>
-                  </div>
-                ))}
+                {selectedBill.items.map((item: any) => {
+                  const portionTag = item.portion ? ` (${item.portion === 'HALF' ? 'Half' : 'Full'})` : '';
+                  const itemName = (item.menuItem?.name || item.name) + portionTag;
+                  return (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                      <span style={{ flex: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{itemName}</span>
+                      <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
+                      <span style={{ flex: 1, textAlign: 'right' }}>₹{item.subtotal.toFixed(2)}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
