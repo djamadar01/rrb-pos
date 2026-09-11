@@ -19,12 +19,61 @@ export default function OwnerDashboard() {
   const [outlets, setOutlets] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [recentBills, setRecentBills] = useState<any[]>([]);
+  const validTabs = ["Overview", "Outlets", "Menu Management", "Reports", "Audit Logs", "Settings"];
   const [activeTab, setActiveTab] = useState("Overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
+
+  // Sync tab with URL query parameter & browser history
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+
+    const handlePopState = () => {
+      const currentParams = new URLSearchParams(window.location.search);
+      const currentTab = currentParams.get("tab");
+      if (currentTab && validTabs.includes(currentTab)) {
+        setActiveTab(currentTab);
+      } else {
+        setActiveTab("Overview");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const switchTab = (tab: string) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (tab === "Overview") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", tab);
+      }
+      window.history.pushState({ tab }, "", url.toString());
+    }
+  };
+
+  const handleBack = () => {
+    if (typeof window !== "undefined") {
+      if (window.history.length > 1) {
+        router.back();
+        return;
+      }
+    }
+    router.push("/");
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -133,17 +182,14 @@ export default function OwnerDashboard() {
         <div className="sidebar-logo desktop-only">RRB Dashboard</div>
         
         <nav className="sidebar-nav">
-          {["Overview", "Outlets", "Menu Management", "Reports", "Audit Logs", "Settings"].map(tab => {
+          {validTabs.map(tab => {
             const i18nKey = tab.replace(" ", "");
             const key = i18nKey.charAt(0).toLowerCase() + i18nKey.slice(1);
             return (
               <button 
                 key={tab}  
                 className={`sidebar-btn ${activeTab === tab ? "active" : ""}`}
-                onClick={() => {
-                  setActiveTab(tab);
-                  setIsSidebarOpen(false); // Close sidebar on mobile after clicking
-                }}
+                onClick={() => switchTab(tab)}
               >
                 <span className="icon">{tabIcons[tab]}</span>
                 <span>{t(key)}</span>
@@ -154,7 +200,47 @@ export default function OwnerDashboard() {
 
         <div className="sidebar-footer">
           <LanguageToggle />
-          <Link href="/" className="sidebar-btn" style={{ textDecoration: 'none', padding: '0.5rem', justifyContent: 'center', borderLeft: 'none' }}>&larr; {t("home")}</Link>
+          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+            <button 
+              type="button"
+              onClick={handleBack} 
+              className="sidebar-btn" 
+              style={{ 
+                flex: 1, 
+                padding: '0.5rem', 
+                justifyContent: 'center', 
+                borderLeft: 'none', 
+                background: 'rgba(255,255,255,0.06)', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '6px',
+                cursor: 'pointer',
+                color: 'inherit',
+                fontSize: '0.85rem'
+              }}
+              title="Go back to previous page"
+            >
+              &larr; {t("back")}
+            </button>
+            <Link 
+              href="/" 
+              className="sidebar-btn" 
+              style={{ 
+                flex: 1, 
+                textDecoration: 'none', 
+                padding: '0.5rem', 
+                justifyContent: 'center', 
+                borderLeft: 'none', 
+                background: 'rgba(255,255,255,0.06)', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '6px',
+                color: 'inherit',
+                fontSize: '0.85rem'
+              }}
+              title="Return to Home"
+            >
+              🏠 {t("home")}
+            </Link>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.8rem', textAlign: 'center', marginTop: '0.5rem' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Owner Role</span>
             <span className="badge success" style={{ padding: '0.2rem' }}>2FA: {t("verified")}</span>

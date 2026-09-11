@@ -111,6 +111,30 @@ export default function LoginPage() {
       `}</style>
 
       <div className="login-box">
+        <button 
+          type="button" 
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/");
+            }
+          }}
+          style={{ 
+            background: 'transparent', 
+            border: 'none', 
+            color: 'var(--text-secondary)', 
+            cursor: 'pointer', 
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: 0,
+            marginBottom: '1rem'
+          }}
+        >
+          &larr; Back
+        </button>
         <h2>System Login</h2>
         {error && <div className="error-msg">{error}</div>}
         

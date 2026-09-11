@@ -22,9 +22,90 @@ export default function POSPage() {
   
   // Derived state for the total prevents any desyncs
   const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const validTabs = ["Menu", "Current Bill", "Recent Bills", "Menu Management"];
   const [activeTab, setActiveTab] = useState("Menu");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { t } = useLanguage();
+
+  // Sync tab and category with URL & browser history
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+    const catParam = params.get("cat");
+    if (catParam && categories.length > 0) {
+      const found = categories.find(c => c.id === catParam);
+      if (found) setSelectedCategory(found);
+    }
+
+    const handlePopState = () => {
+      const currentParams = new URLSearchParams(window.location.search);
+      const currentTab = currentParams.get("tab");
+      if (currentTab && validTabs.includes(currentTab)) {
+        setActiveTab(currentTab);
+      } else {
+        setActiveTab("Menu");
+      }
+
+      const currentCat = currentParams.get("cat");
+      if (currentCat && categories.length > 0) {
+        const found = categories.find(c => c.id === currentCat);
+        setSelectedCategory(found || null);
+      } else {
+        setSelectedCategory(null);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [categories]);
+
+  const switchTab = (tab: string) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
+    setSelectedCategory(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (tab === "Menu") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", tab);
+      }
+      url.searchParams.delete("cat");
+      window.history.pushState({ tab }, "", url.toString());
+    }
+  };
+
+  const selectCategory = (cat: any) => {
+    setSelectedCategory(cat);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (cat) {
+        url.searchParams.set("cat", cat.id);
+      } else {
+        url.searchParams.delete("cat");
+      }
+      window.history.pushState({ tab: activeTab, cat: cat?.id }, "", url.toString());
+    }
+  };
+
+  const handleBack = () => {
+    if (selectedCategory) {
+      selectCategory(null);
+      return;
+    }
+    if (typeof window !== "undefined") {
+      if (window.history.length > 1) {
+        router.back();
+        return;
+      }
+    }
+    router.push("/");
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -369,28 +450,28 @@ export default function POSPage() {
         <nav className="sidebar-nav">
           <button 
             className={`sidebar-btn ${activeTab === "Menu" ? "active" : ""}`}
-            onClick={() => { setActiveTab("Menu"); setIsSidebarOpen(false); }}
+            onClick={() => switchTab("Menu")}
           >
             <span className="icon">🍔</span>
             <span>Menu Categories</span>
           </button>
           <button 
             className={`sidebar-btn ${activeTab === "Current Bill" ? "active" : ""}`}
-            onClick={() => { setActiveTab("Current Bill"); setIsSidebarOpen(false); }}
+            onClick={() => switchTab("Current Bill")}
           >
             <span className="icon">🛒</span>
             <span>Current Bill {cart.length > 0 && `(${cart.length})`}</span>
           </button>
           <button 
             className={`sidebar-btn ${activeTab === "Recent Bills" ? "active" : ""}`}
-            onClick={() => { setActiveTab("Recent Bills"); setIsSidebarOpen(false); }}
+            onClick={() => switchTab("Recent Bills")}
           >
             <span className="icon">🧾</span>
             <span>Recent Bills</span>
           </button>
           <button 
             className={`sidebar-btn ${activeTab === "Menu Management" ? "active" : ""}`}
-            onClick={() => { setActiveTab("Menu Management"); setIsSidebarOpen(false); }}
+            onClick={() => switchTab("Menu Management")}
           >
             <span className="icon">🍔</span>
             <span>{t("menuManagement")}</span>
@@ -399,7 +480,47 @@ export default function POSPage() {
 
         <div className="sidebar-footer">
           <LanguageToggle />
-          <Link href="/" className="sidebar-btn" style={{ textDecoration: 'none', padding: '0.5rem', justifyContent: 'center', borderLeft: 'none' }}>&larr; Home</Link>
+          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+            <button 
+              type="button"
+              onClick={handleBack} 
+              className="sidebar-btn" 
+              style={{ 
+                flex: 1, 
+                padding: '0.5rem', 
+                justifyContent: 'center', 
+                borderLeft: 'none', 
+                background: 'rgba(255,255,255,0.06)', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '6px',
+                cursor: 'pointer',
+                color: 'inherit',
+                fontSize: '0.85rem'
+              }}
+              title="Go back to previous page"
+            >
+              &larr; {t("back") || "Back"}
+            </button>
+            <Link 
+              href="/" 
+              className="sidebar-btn" 
+              style={{ 
+                flex: 1, 
+                textDecoration: 'none', 
+                padding: '0.5rem', 
+                justifyContent: 'center', 
+                borderLeft: 'none', 
+                background: 'rgba(255,255,255,0.06)', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '6px',
+                color: 'inherit',
+                fontSize: '0.85rem'
+              }}
+              title="Return to Home"
+            >
+              🏠 {t("home") || "Home"}
+            </Link>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.8rem', textAlign: 'center', marginTop: '0.5rem' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Status: <span style={{ color: 'var(--success-color)' }}>Online</span></span>
             <span className="badge info" style={{ padding: '0.2rem' }}>{outlet ? outlet.name : "Loading..."}</span>
@@ -413,7 +534,7 @@ export default function POSPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2>Menu (F1)</h2>
               {selectedCategory && (
-                <button onClick={() => setSelectedCategory(null)} className="btn-primary" style={{ padding: '0.5rem 1rem', background: '#334155' }}>
+                <button onClick={() => selectCategory(null)} className="btn-primary" style={{ padding: '0.5rem 1rem', background: '#334155' }}>
                   &larr; Back to Categories
                 </button>
               )}
@@ -430,7 +551,7 @@ export default function POSPage() {
                   <button 
                     key={cat.id} 
                     className="category-btn"
-                    onClick={() => setSelectedCategory(cat)}
+                    onClick={() => selectCategory(cat)}
                     style={{ 
                       padding: '1rem', 
                       borderRadius: '8px', 

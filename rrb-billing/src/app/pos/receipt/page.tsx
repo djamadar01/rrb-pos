@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function ReceiptPrintPage() {
+  const router = useRouter();
   const bill = {
     billNumber: "B-1025",
     date: new Date().toLocaleString(),
@@ -21,6 +23,14 @@ export default function ReceiptPrintPage() {
     // setTimeout(() => window.print(), 500);
   }, []);
 
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/pos");
+    }
+  };
+
   return (
     <div className="receipt-container">
       <style jsx global>{`
@@ -31,11 +41,45 @@ export default function ReceiptPrintPage() {
         .receipt-item { display: flex; justify-content: space-between; }
         .receipt-total { font-weight: bold; font-size: 1.2rem; }
         @media print {
+          .no-print { display: none !important; }
           @page { margin: 0; }
           body { margin: 1cm; }
         }
       `}</style>
       
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <button 
+          onClick={handleBack} 
+          style={{ 
+            padding: '0.5rem 1rem', 
+            background: '#1e293b', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontFamily: 'sans-serif'
+          }}
+        >
+          &larr; Back to POS
+        </button>
+        <button 
+          onClick={() => window.print()} 
+          style={{ 
+            padding: '0.5rem 1rem', 
+            background: '#059669', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontFamily: 'sans-serif'
+          }}
+        >
+          🖨️ Print
+        </button>
+      </div>
+
       <div className="receipt-header">
         <h2>RRB Fast Food</h2>
         <p>{bill.outletName}</p>

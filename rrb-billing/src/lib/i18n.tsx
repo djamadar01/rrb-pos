@@ -12,6 +12,7 @@ const dictionaries: Record<Language, Translations> = {
   en: {
     // General
     home: "Home",
+    back: "Back",
     role: "Role",
     verified: "Verified",
     
@@ -63,6 +64,7 @@ const dictionaries: Record<Language, Translations> = {
   mr: {
     // General
     home: "मुख्यपृष्ठ",
+    back: "मागे",
     role: "भूमिका",
     verified: "सत्यापित",
     
