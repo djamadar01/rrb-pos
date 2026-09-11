@@ -138,7 +138,7 @@ export async function POST(req: Request) {
         items: {
           include: {
             menuItem: {
-              select: { id: true, name: true, price: true }
+              select: { id: true, name: true, nameMr: true, nameHi: true, price: true, halfPrice: true }
             }
           }
         },

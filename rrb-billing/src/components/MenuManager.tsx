@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { autoSuggestTranslations } from "@/lib/dishTranslations";
 
 export default function MenuManager() {
   const [activeTab, setActiveTab] = useState<"dishes" | "categories">("dishes");
@@ -12,7 +13,15 @@ export default function MenuManager() {
   const [isLoading, setIsLoading] = useState(true);
 
   // New Dish State
-  const [newItem, setNewItem] = useState({ name: "", price: "", halfPrice: "", categoryId: "", imageUrl: "" });
+  const [newItem, setNewItem] = useState({ 
+    name: "", 
+    nameMr: "", 
+    nameHi: "", 
+    price: "", 
+    halfPrice: "", 
+    categoryId: "", 
+    imageUrl: "" 
+  });
   const [newDishImage, setNewDishImage] = useState<File | null>(null);
 
   // New Category State
@@ -23,7 +32,15 @@ export default function MenuManager() {
   
   // Edit State
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editItemData, setEditItemData] = useState({ name: "", price: "", halfPrice: "", categoryId: "", imageUrl: "" });
+  const [editItemData, setEditItemData] = useState({ 
+    name: "", 
+    nameMr: "", 
+    nameHi: "", 
+    price: "", 
+    halfPrice: "", 
+    categoryId: "", 
+    imageUrl: "" 
+  });
 
   const fetchData = async () => {
     try {
@@ -178,7 +195,7 @@ export default function MenuManager() {
       });
       
       if (res.ok) {
-        setNewItem({ name: "", price: "", halfPrice: "", categoryId: "", imageUrl: "" });
+        setNewItem({ name: "", nameMr: "", nameHi: "", price: "", halfPrice: "", categoryId: "", imageUrl: "" });
         setNewDishImage(null);
         fetchData();
       } else {
@@ -193,10 +210,22 @@ export default function MenuManager() {
     }
   };
 
+  const handleNameChange = (englishName: string) => {
+    const suggestions = autoSuggestTranslations(englishName);
+    setNewItem(prev => ({
+      ...prev,
+      name: englishName,
+      nameMr: (!prev.nameMr || prev.nameMr === autoSuggestTranslations(prev.name).nameMr) ? suggestions.nameMr : prev.nameMr,
+      nameHi: (!prev.nameHi || prev.nameHi === autoSuggestTranslations(prev.name).nameHi) ? suggestions.nameHi : prev.nameHi,
+    }));
+  };
+
   const startEditing = (item: any) => {
     setEditingItemId(item.id);
     setEditItemData({ 
       name: item.name, 
+      nameMr: item.nameMr || "",
+      nameHi: item.nameHi || "",
       price: item.price.toString(), 
       halfPrice: item.halfPrice != null ? item.halfPrice.toString() : "",
       categoryId: item.categoryId || "", 
@@ -213,6 +242,8 @@ export default function MenuManager() {
         body: JSON.stringify({ 
           id: item.id, 
           name: editItemData.name, 
+          nameMr: editItemData.nameMr,
+          nameHi: editItemData.nameHi,
           price: editItemData.price, 
           halfPrice: editItemData.halfPrice,
           categoryId: editItemData.categoryId,
@@ -323,18 +354,26 @@ export default function MenuManager() {
             <h3 style={{ marginBottom: '1rem' }}>Add New Dish</h3>
             <form onSubmit={handleAddDish} className="mobile-stack-form" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 2, minWidth: '180px' }}>
-                <label>Dish Name</label>
-                <input type="text" required placeholder="e.g. Veg Fried Rice" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+                <label>Dish Name (English)</label>
+                <input type="text" required placeholder="e.g. Veg Fried Rice" value={newItem.name} onChange={e => handleNameChange(e.target.value)} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '110px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1.5, minWidth: '150px' }}>
+                <label>मराठी नाव (Marathi)</label>
+                <input type="text" placeholder="उदा. व्हेज फ्राईड राईस" value={newItem.nameMr} onChange={e => setNewItem({...newItem, nameMr: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1.5, minWidth: '150px' }}>
+                <label>हिंदी नाम (Hindi)</label>
+                <input type="text" placeholder="उदा. वेज फ्राइड राइस" value={newItem.nameHi} onChange={e => setNewItem({...newItem, nameHi: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '100px' }}>
                 <label>Full Rate (₹)</label>
                 <input type="number" step="0.01" required placeholder="e.g. 120" value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '110px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '100px' }}>
                 <label>Half Rate (₹) <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>(Optional)</span></label>
                 <input type="number" step="0.01" placeholder="e.g. 70" value={newItem.halfPrice} onChange={e => setNewItem({...newItem, halfPrice: e.target.value})} style={{ padding: '0.75rem', borderRadius: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
                 <label>Category</label>
                 <select 
                   required
@@ -348,11 +387,11 @@ export default function MenuManager() {
                   ))}
                 </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '180px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '160px' }}>
                 <label>Dish Image</label>
                 <input type="file" accept="image/*" onChange={e => setNewDishImage(e.target.files?.[0] || null)} style={{ padding: '0.6rem', color: 'white' }} />
               </div>
-              <button type="submit" className="btn-primary" disabled={isSubmitting || categories.length === 0} style={{ height: '45px', padding: '0 2rem' }}>
+              <button type="submit" className="btn-primary" disabled={isSubmitting || categories.length === 0} style={{ height: '45px', padding: '0 1.5rem' }}>
                 {isSubmitting ? "Adding..." : "+ Add Dish"}
               </button>
             </form>
@@ -368,7 +407,20 @@ export default function MenuManager() {
                 <div key={item.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: item.isActive ? 1 : 0.5 }}>
                   {editingItemId === item.id ? (
                     <>
-                      <input type="text" value={editItemData.name} onChange={e => setEditItemData({...editItemData, name: e.target.value})} style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>English Name</label>
+                        <input type="text" value={editItemData.name} onChange={e => setEditItemData({...editItemData, name: e.target.value})} style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>मराठी नाव</label>
+                          <input type="text" value={editItemData.nameMr} onChange={e => setEditItemData({...editItemData, nameMr: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>हिंदी नाम</label>
+                          <input type="text" value={editItemData.nameHi} onChange={e => setEditItemData({...editItemData, nameHi: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', color: 'white' }} />
+                        </div>
+                      </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: '80px' }}>
                           <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Full (₹)</label>
@@ -408,6 +460,13 @@ export default function MenuManager() {
                           )}
                           <div>
                             <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{item.name}</div>
+                            {(item.nameMr || item.nameHi) && (
+                              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', gap: '0.5rem', marginTop: '0.1rem' }}>
+                                {item.nameMr && <span>मराठी: <strong>{item.nameMr}</strong></span>}
+                                {item.nameMr && item.nameHi && <span>&bull;</span>}
+                                {item.nameHi && <span>हिंदी: <strong>{item.nameHi}</strong></span>}
+                              </div>
+                            )}
                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.2rem' }}>
                               <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
                                 Full: ₹{item.price.toFixed(2)}

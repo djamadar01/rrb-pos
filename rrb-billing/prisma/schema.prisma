@@ -62,6 +62,8 @@ model Category {
 model MenuItem {
   id         String         @id @default(uuid())
   name       String
+  nameMr     String?
+  nameHi     String?
   price      Float        
   halfPrice  Float?
   categoryId String?

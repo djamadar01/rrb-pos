@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import MenuManager from "@/components/MenuManager";
 import { useLanguage } from "@/lib/i18n";
 import LanguageToggle from "@/components/LanguageToggle";
+import { getLocalizedDishName } from "@/lib/dishTranslations";
 
 export default function POSPage() {
   const { data: session, status } = useSession();
@@ -425,8 +426,9 @@ export default function POSPage() {
     text += `----------------------\n`;
     
     selectedBill.items.forEach((item: any) => {
+       const localizedName = getLocalizedDishName(item.menuItem || item, language);
        const portionTag = item.portion ? ` (${item.portion === 'HALF' ? t("half") : t("full")})` : '';
-       const name = (item.menuItem?.name || item.name) + portionTag;
+       const name = localizedName + portionTag;
        text += `${name}\n`;
        text += `${item.quantity} x Rs.${(item.subtotal/item.quantity).toFixed(2)} = Rs.${item.subtotal.toFixed(2)}\n`;
     });
@@ -623,11 +625,13 @@ export default function POSPage() {
                           <div style={{ width: '100%', height: '120px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🍽️</div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start', flexDirection: 'column', gap: '0.2rem' }}>
-                          <span className="item-name" style={{ fontWeight: 'bold', fontSize: '1rem' }}>{item.name}</span>
+                          <span className="item-name" style={{ fontWeight: 'bold', fontSize: '1rem', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                            {getLocalizedDishName(item, language)}
+                          </span>
                           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
-                            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>Full: ₹{item.price.toFixed(2)}</span>
+                            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>{t("full")}: ₹{item.price.toFixed(2)}</span>
                             {item.halfPrice != null && item.halfPrice > 0 && (
-                              <span style={{ color: '#60a5fa', fontWeight: 600 }}>Half: ₹{item.halfPrice.toFixed(2)}</span>
+                              <span style={{ color: '#60a5fa', fontWeight: 600 }}>{t("half")}: ₹{item.halfPrice.toFixed(2)}</span>
                             )}
                           </div>
                         </div>
@@ -642,7 +646,7 @@ export default function POSPage() {
                                     onClick={() => addToCart(item, "FULL")}
                                     style={{ width: '100%', padding: '0.45rem 0.2rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
                                   >
-                                    + Full (₹{item.price})
+                                    + {t("full")} (₹{item.price})
                                   </button>
                                 ) : (
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(212, 175, 55, 0.2)', border: '1px solid var(--accent-color)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -660,7 +664,7 @@ export default function POSPage() {
                                     onClick={() => addToCart(item, "HALF")}
                                     style={{ width: '100%', padding: '0.45rem 0.2rem', borderRadius: '4px', border: '1px solid #3b82f6', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
                                   >
-                                    + Half (₹{item.halfPrice})
+                                    + {t("half")} (₹{item.halfPrice})
                                   </button>
                                 ) : (
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', borderRadius: '4px', overflow: 'hidden' }}>
@@ -678,7 +682,7 @@ export default function POSPage() {
                                   onClick={() => addToCart(item, "FULL")}
                                   style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--accent-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 'bold' }}
                                 >
-                                  + ADD
+                                  + {t("addDish")}
                                 </button>
                               ) : (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -732,7 +736,9 @@ export default function POSPage() {
                   <div key={item.cartId} className="cart-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600 }}>{item.name}</span>
+                        <span style={{ fontWeight: 600, wordBreak: 'break-word' }}>
+                          {getLocalizedDishName(item, language)}
+                        </span>
                         <span style={{ 
                           fontSize: '0.7rem', 
                           fontWeight: 'bold',
@@ -741,7 +747,7 @@ export default function POSPage() {
                           background: item.portion === 'HALF' ? '#2563eb' : 'var(--accent-color)',
                           color: item.portion === 'HALF' ? 'white' : 'var(--bg-primary)'
                         }}>
-                          {item.portion === 'HALF' ? 'Half' : 'Full'}
+                          {item.portion === 'HALF' ? t("half") : t("full")}
                         </span>
                       </div>
                       <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.2rem' }}>₹{item.price.toFixed(2)} {t("each")}</div>
@@ -876,13 +882,14 @@ export default function POSPage() {
                   <span style={{ flex: 1, textAlign: 'right' }}>{t("amt")}</span>
                 </div>
                 {selectedBill.items.map((item: any) => {
+                  const localizedName = getLocalizedDishName(item.menuItem || item, language);
                   const portionTag = item.portion ? ` (${item.portion === 'HALF' ? t("half") : t("full")})` : '';
-                  const itemName = (item.menuItem?.name || item.name) + portionTag;
+                  const itemName = localizedName + portionTag;
                   return (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ flex: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{itemName}</span>
-                      <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
-                      <span style={{ flex: 1, textAlign: 'right' }}>₹{item.subtotal.toFixed(2)}</span>
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem', gap: '0.5rem' }}>
+                      <span style={{ flex: 2, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.25 }}>{itemName}</span>
+                      <span style={{ flex: 1, textAlign: 'center', whiteSpace: 'nowrap' }}>{item.quantity}</span>
+                      <span style={{ flex: 1, textAlign: 'right', whiteSpace: 'nowrap' }}>₹{item.subtotal.toFixed(2)}</span>
                     </div>
                   );
                 })}

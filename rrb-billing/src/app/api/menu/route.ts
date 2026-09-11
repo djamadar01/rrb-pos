@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, price, halfPrice, categoryId, imageUrl } = body;
+    const { name, nameMr, nameHi, price, halfPrice, categoryId, imageUrl } = body;
 
     if (!name || price === undefined || !categoryId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -45,6 +45,8 @@ export async function POST(req: Request) {
     const newItem = await prisma.menuItem.create({
       data: {
         name,
+        nameMr: nameMr ? nameMr.trim() : null,
+        nameHi: nameHi ? nameHi.trim() : null,
         price: parseFloat(price),
         halfPrice: parsedHalfPrice,
         categoryId,
@@ -67,7 +69,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { id, name, price, halfPrice, categoryId, imageUrl, isActive } = body;
+    const { id, name, nameMr, nameHi, price, halfPrice, categoryId, imageUrl, isActive } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
@@ -77,6 +79,8 @@ export async function PUT(req: Request) {
       where: { id },
       data: {
         ...(name !== undefined && { name }),
+        ...(nameMr !== undefined && { nameMr: nameMr ? nameMr.trim() : null }),
+        ...(nameHi !== undefined && { nameHi: nameHi ? nameHi.trim() : null }),
         ...(price !== undefined && { price: parseFloat(price) }),
         ...(halfPrice !== undefined && { 
           halfPrice: (halfPrice === null || halfPrice === "") ? null : parseFloat(halfPrice) 

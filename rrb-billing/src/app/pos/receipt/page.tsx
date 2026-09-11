@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n";
+import { getLocalizedDishName } from "@/lib/dishTranslations";
 
 export default function ReceiptPrintPage() {
   const router = useRouter();
@@ -124,7 +125,7 @@ export default function ReceiptPrintPage() {
         </div>
         {bill.items.map((item, idx) => (
           <div key={idx} className="receipt-item" style={{ marginBottom: '0.2rem' }}>
-            <span>{item.qty}x {item.name}</span>
+            <span style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{item.qty}x {getLocalizedDishName(item.name, language)}</span>
             <span>₹{item.price.toFixed(2)}</span>
           </div>
         ))}
