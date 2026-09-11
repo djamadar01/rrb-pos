@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
+
 :root {
   /* Premium Dark Mode Variables */
   --bg-primary: #12141d;
@@ -393,6 +395,34 @@ body {
   justify-content: flex-end;
 }
 
+/* Receipt Screen & Thermal Print Styles */
+.print-receipt {
+  font-family: 'Courier New', Courier, monospace, 'Noto Sans Devanagari', sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.print-receipt.receipt-mr,
+.print-receipt.receipt-hi {
+  font-family: 'Noto Sans Devanagari', 'Mukta', 'Mangal', 'Nirmala UI', sans-serif !important;
+  font-size: 12.5px;
+  letter-spacing: 0.2px;
+}
+
+.print-receipt.receipt-en {
+  font-family: 'Courier New', Courier, monospace, 'Noto Sans Devanagari', sans-serif !important;
+}
+
+.receipt-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin: 0 auto 0.5rem auto;
+  display: block;
+  border: 1.5px solid #222;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -406,11 +436,37 @@ body {
     top: 0;
     width: 80mm; /* Standard thermal receipt width */
     margin: 0;
-    padding: 10px;
-    font-family: monospace;
+    padding: 8px 10px;
+    font-family: 'Courier New', Courier, monospace, 'Noto Sans Devanagari', sans-serif;
     font-size: 12px;
+    line-height: 1.35;
     color: black !important;
     background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-receipt.receipt-mr,
+  .print-receipt.receipt-mr *,
+  .print-receipt.receipt-hi,
+  .print-receipt.receipt-hi * {
+    font-family: 'Noto Sans Devanagari', 'Mukta', 'Mangal', 'Nirmala UI', sans-serif !important;
+    font-size: 12px;
+    letter-spacing: 0.2px;
+  }
+  .print-receipt.receipt-en,
+  .print-receipt.receipt-en * {
+    font-family: 'Courier New', Courier, monospace, 'Noto Sans Devanagari', sans-serif !important;
+  }
+  .receipt-logo {
+    width: 65px !important;
+    height: 65px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    margin: 0 auto 4px auto !important;
+    display: block !important;
+    border: 1px solid #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .print-receipt .no-print { display: none !important; }
 }

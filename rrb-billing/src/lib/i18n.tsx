@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Language = 'en' | 'mr';
+export type Language = 'en' | 'mr' | 'hi';
 
 interface Translations {
   [key: string]: string;
@@ -35,6 +35,17 @@ const dictionaries: Record<Language, Translations> = {
     close: "Close",
     printBill: "Print Bill (Thermal)",
     
+    // Thermal Receipt
+    restaurantName: "RRB Fast Food & Chinese",
+    billNo: "Bill No",
+    date: "Date",
+    cashier: "Cashier",
+    paidVia: "Paid via",
+    cash: "Cash",
+    online: "Online",
+    thankYouMsg1: "Thank you for visiting!",
+    thankYouMsg2: "Please come again.",
+
     // Owner Dashboard
     overview: "Overview",
     outlets: "Outlets",
@@ -91,6 +102,17 @@ const dictionaries: Record<Language, Translations> = {
     close: "बंद करा",
     printBill: "बिल प्रिंट करा (थर्मल)",
 
+    // Thermal Receipt
+    restaurantName: "आरआरबी फास्ट फूड & चायनीज",
+    billNo: "बिल क्र.",
+    date: "दिनांक",
+    cashier: "कॅशियर",
+    paidVia: "पेमेंट पद्धत",
+    cash: "रोख",
+    online: "ऑनलाइन",
+    thankYouMsg1: "भेट दिल्याबद्दल धन्यवाद!",
+    thankYouMsg2: "पुन्हा नक्की या.",
+
     // Owner Dashboard
     overview: "आढावा",
     outlets: "दुकाने",
@@ -120,43 +142,120 @@ const dictionaries: Record<Language, Translations> = {
     delete: "हटवा",
     disable: "अक्षम करा",
     enable: "सक्षम करा",
+  },
+  hi: {
+    // General
+    home: "होम",
+    back: "वापस",
+    role: "भूमिका",
+    verified: "सत्यापित",
+    
+    // POS
+    currentBill: "वर्तमान बिल",
+    payCash: "नकद भुगतान (F4)",
+    payOnline: "ऑनलाइन भुगतान (F5)",
+    recentBills: "हाल के बिल",
+    subtotal: "उपकुल",
+    tax: "कर (टैक्स)",
+    total: "कुल योग",
+    checkout: "चेकआउट",
+    items: "आइटम",
+    each: "प्रति",
+    noBillsYet: "अभी तक कोई बिल नहीं बना है।",
+    billDetails: "बिल विवरण",
+    item: "आइटम",
+    qty: "मात्रा",
+    amt: "राशि",
+    close: "बंद करें",
+    printBill: "बिल प्रिंट करें (थर्मल)",
+
+    // Thermal Receipt
+    restaurantName: "आरआरबी फास्ट फूड & चायनीज",
+    billNo: "बिल सं.",
+    date: "दिनांक",
+    cashier: "कैशियर",
+    paidVia: "भुगतान प्रकार",
+    cash: "नकद",
+    online: "ऑनलाइन",
+    thankYouMsg1: "पधारने के लिए धन्यवाद!",
+    thankYouMsg2: "कृपया फिर पधारें।",
+
+    // Owner Dashboard
+    overview: "अवलोकन",
+    outlets: "आउटलेट्स",
+    menuManagement: "मेनू प्रबंधन",
+    reports: "रिपोर्ट्स",
+    auditLogs: "ऑडिट लॉग",
+    settings: "सेटिंग्स",
+    
+    todayRevenue: "आज का",
+    totalOrdersToday: "आज के ऑर्डर्स",
+    avgOrderValue: "औसत ऑर्डर मूल्य",
+    onlinePayments: "ऑनलाइन भुगतान",
+    cashPayments: "नकद भुगतान",
+
+    // Menu
+    addDish: "आइटम जोड़ें",
+    dishName: "आइटम का नाम",
+    price: "मूल्य",
+    full: "फुल",
+    half: "हाफ",
+    fullRate: "फुल दर (₹)",
+    halfRate: "हाफ दर (₹)",
+    category: "श्रेणी",
+    save: "सुरक्षित करें",
+    cancel: "रद्द करें",
+    edit: "संपादित करें",
+    delete: "हटाएं",
+    disable: "अक्षम करें",
+    enable: "सक्षम करें",
   }
 };
 
 interface LanguageContextType {
   language: Language;
+  setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
   t: (key: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
   language: 'en',
+  setLanguage: () => {},
   toggleLanguage: () => {},
   t: (key) => key,
 });
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
     const savedLang = localStorage.getItem('app_lang') as Language;
-    if (savedLang && (savedLang === 'en' || savedLang === 'mr')) {
-      setLanguage(savedLang);
+    if (savedLang && (savedLang === 'en' || savedLang === 'mr' || savedLang === 'hi')) {
+      setLanguageState(savedLang);
     }
   }, []);
 
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem('app_lang', lang);
+  };
+
   const toggleLanguage = () => {
-    const newLang = language === 'en' ? 'mr' : 'en';
-    setLanguage(newLang);
-    localStorage.setItem('app_lang', newLang);
+    const nextLang: Record<Language, Language> = {
+      en: 'mr',
+      mr: 'hi',
+      hi: 'en',
+    };
+    setLanguage(nextLang[language]);
   };
 
   const t = (key: string) => {
-    return dictionaries[language][key] || dictionaries['en'][key] || key;
+    return dictionaries[language]?.[key] || dictionaries['en']?.[key] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, toggleLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );

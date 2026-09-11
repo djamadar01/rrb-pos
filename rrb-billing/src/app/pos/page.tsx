@@ -25,7 +25,7 @@ export default function POSPage() {
   const validTabs = ["Menu", "Current Bill", "Recent Bills", "Menu Management"];
   const [activeTab, setActiveTab] = useState("Menu");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
   // Sync tab and category with URL & browser history
   useEffect(() => {
@@ -413,26 +413,31 @@ export default function POSPage() {
   const shareBill = async () => {
     if (!selectedBill) return;
     
-    let text = `--- RRB Fast Food ---\n`;
+    let text = `--- ${t("restaurantName")} ---\n`;
     text += `${selectedBill.outlet?.name || ''}\n`;
-    text += `Bill No: ${selectedBill.billNumber}\n`;
-    text += `Date: ${new Date(selectedBill.createdAt).toLocaleString()}\n`;
-    text += `Cashier: ${selectedBill.creator?.name || ''}\n`;
+    text += `${t("billNo")}: ${selectedBill.billNumber}\n`;
+    text += `${t("date")}: ${new Date(selectedBill.createdAt).toLocaleString(language === 'mr' ? 'mr-IN' : language === 'hi' ? 'hi-IN' : 'en-IN')}\n`;
+    text += `${t("cashier")}: ${selectedBill.creator?.name || ''}\n`;
+    if (selectedBill.payments?.[0]?.method) {
+      const payLabel = selectedBill.payments[0].method === 'CASH' ? t("cash") : (selectedBill.payments[0].method === 'RAZORPAY' || selectedBill.payments[0].method === 'ONLINE' ? t("online") : selectedBill.payments[0].method);
+      text += `${t("paidVia")}: ${payLabel}\n`;
+    }
     text += `----------------------\n`;
     
     selectedBill.items.forEach((item: any) => {
-       const portionTag = item.portion ? ` (${item.portion === 'HALF' ? 'Half' : 'Full'})` : '';
+       const portionTag = item.portion ? ` (${item.portion === 'HALF' ? t("half") : t("full")})` : '';
        const name = (item.menuItem?.name || item.name) + portionTag;
        text += `${name}\n`;
        text += `${item.quantity} x Rs.${(item.subtotal/item.quantity).toFixed(2)} = Rs.${item.subtotal.toFixed(2)}\n`;
     });
     
     text += `----------------------\n`;
-    text += `Subtotal: Rs.${selectedBill.subtotal.toFixed(2)}\n`;
-    text += `Tax: Rs.${selectedBill.taxAmount.toFixed(2)}\n`;
-    text += `TOTAL: Rs.${selectedBill.finalAmount.toFixed(2)}\n`;
+    text += `${t("subtotal")}: Rs.${selectedBill.subtotal.toFixed(2)}\n`;
+    text += `${t("tax")}: Rs.${selectedBill.taxAmount.toFixed(2)}\n`;
+    text += `${t("total").toUpperCase()}: Rs.${selectedBill.finalAmount.toFixed(2)}\n`;
     text += `----------------------\n`;
-    text += `Thank you for visiting!\n`;
+    text += `${t("thankYouMsg1")}\n`;
+    text += `${t("thankYouMsg2")}\n`;
 
     const base64Text = btoa(unescape(encodeURIComponent(text)));
     const url = "intent:base64," + base64Text + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
@@ -845,29 +850,36 @@ export default function POSPage() {
             <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>{t("billDetails")}</h2>
             
             {/* The Print Area */}
-            <div className="print-receipt" style={{ background: 'white', color: 'black', padding: '1rem', borderRadius: '4px' }}>
-              <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0 }}>RRB Fast Food</h3>
-                <p style={{ margin: 0, fontSize: '0.8rem' }}>{selectedBill.outlet?.name}</p>
-                <p style={{ margin: 0, fontSize: '0.8rem' }}>Bill No: {selectedBill.billNumber}</p>
-                <p style={{ margin: 0, fontSize: '0.8rem' }}>Date: {new Date(selectedBill.createdAt).toLocaleString()}</p>
-                <p style={{ margin: 0, fontSize: '0.8rem' }}>Cashier: {selectedBill.creator?.name}</p>
+            <div className={`print-receipt receipt-${language}`} style={{ background: 'white', color: 'black', padding: '1rem', borderRadius: '4px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '0.8rem' }}>
+                <img 
+                  src="/rrb-logo.jpg" 
+                  alt="RRB Logo" 
+                  className="receipt-logo" 
+                />
+                <h3 style={{ margin: '0.2rem 0', fontSize: '1.15rem', fontWeight: 800 }}>{t("restaurantName")}</h3>
+                <p style={{ margin: '0.1rem 0', fontSize: '0.85rem', fontWeight: 600 }}>{selectedBill.outlet?.name}</p>
+                <p style={{ margin: '0.1rem 0', fontSize: '0.8rem' }}>{t("billNo")}: <strong>{selectedBill.billNumber}</strong></p>
+                <p style={{ margin: '0.1rem 0', fontSize: '0.8rem' }}>{t("date")}: {new Date(selectedBill.createdAt).toLocaleString(language === 'mr' ? 'mr-IN' : language === 'hi' ? 'hi-IN' : 'en-IN')}</p>
+                <p style={{ margin: '0.1rem 0', fontSize: '0.8rem' }}>{t("cashier")}: {selectedBill.creator?.name}</p>
                 {selectedBill.payments?.[0]?.method && (
-                  <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 'bold' }}>Paid via: {selectedBill.payments[0].method}</p>
+                  <p style={{ margin: '0.1rem 0', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    {t("paidVia")}: {selectedBill.payments[0].method === 'CASH' ? t("cash") : (selectedBill.payments[0].method === 'RAZORPAY' || selectedBill.payments[0].method === 'ONLINE' ? t("online") : selectedBill.payments[0].method)}
+                  </p>
                 )}
               </div>
 
-              <div style={{ borderTop: '1px dashed #ccc', borderBottom: '1px dashed #ccc', padding: '0.5rem 0', margin: '1rem 0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+              <div style={{ borderTop: '1px dashed #ccc', borderBottom: '1px dashed #ccc', padding: '0.5rem 0', margin: '0.8rem 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginBottom: '0.4rem', borderBottom: '1px solid #eee', paddingBottom: '0.2rem' }}>
                   <span style={{ flex: 2 }}>{t("item")}</span>
                   <span style={{ flex: 1, textAlign: 'center' }}>{t("qty")}</span>
                   <span style={{ flex: 1, textAlign: 'right' }}>{t("amt")}</span>
                 </div>
                 {selectedBill.items.map((item: any) => {
-                  const portionTag = item.portion ? ` (${item.portion === 'HALF' ? 'Half' : 'Full'})` : '';
+                  const portionTag = item.portion ? ` (${item.portion === 'HALF' ? t("half") : t("full")})` : '';
                   const itemName = (item.menuItem?.name || item.name) + portionTag;
                   return (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                       <span style={{ flex: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{itemName}</span>
                       <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
                       <span style={{ flex: 1, textAlign: 'right' }}>₹{item.subtotal.toFixed(2)}</span>
@@ -876,22 +888,22 @@ export default function POSPage() {
                 })}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                 <span>{t("subtotal")}:</span>
                 <span>₹{selectedBill.subtotal.toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                 <span>{t("tax")}:</span>
                 <span>₹{selectedBill.taxAmount.toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '0.4rem', borderTop: '1px dashed #ccc', paddingTop: '0.4rem' }}>
                 <span>{t("total")}:</span>
                 <span>₹{selectedBill.finalAmount.toFixed(2)}</span>
               </div>
               
-              <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
-                <p style={{ margin: 0 }}>Thank you for visiting!</p>
-                <p style={{ margin: 0 }}>Please come again.</p>
+              <div style={{ textAlign: 'center', marginTop: '1.2rem', fontSize: '0.85rem' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>{t("thankYouMsg1")}</p>
+                <p style={{ margin: '0.1rem 0 0 0' }}>{t("thankYouMsg2")}</p>
               </div>
             </div>
 

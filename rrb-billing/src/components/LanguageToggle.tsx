@@ -1,34 +1,59 @@
 "use client";
 
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, Language } from "@/lib/i18n";
 
 export default function LanguageToggle() {
-  const { language, toggleLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+
+  const languages: { code: Language; label: string; title: string }[] = [
+    { code: 'en', label: 'EN', title: 'English' },
+    { code: 'mr', label: 'मराठी', title: 'मराठी (Marathi)' },
+    { code: 'hi', label: 'हिंदी', title: 'हिंदी (Hindi)' },
+  ];
 
   return (
-    <button 
-      onClick={toggleLanguage}
-      title="Toggle English / Marathi"
+    <div 
+      className="language-toggle-group"
       style={{
-        background: 'var(--accent-color)',
-        color: 'white',
-        border: '1px solid rgba(255,255,255,0.2)',
-        padding: '0.4rem 0.8rem',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-        transition: 'transform 0.2s',
+        background: 'rgba(255, 255, 255, 0.08)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        borderRadius: '20px',
+        padding: '2px',
+        gap: '2px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
       }}
-      onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-      onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
     >
-      <span style={{ opacity: language === 'en' ? 1 : 0.5 }}>A</span>
-      <span style={{ opacity: 0.5 }}>/</span>
-      <span style={{ opacity: language === 'mr' ? 1 : 0.5 }}>अ</span>
-    </button>
+      {languages.map((lang) => {
+        const isActive = language === lang.code;
+        return (
+          <button
+            key={lang.code}
+            onClick={() => setLanguage(lang.code)}
+            title={lang.title}
+            type="button"
+            style={{
+              background: isActive ? 'var(--accent-color)' : 'transparent',
+              color: isActive ? '#ffffff' : 'var(--text-secondary)',
+              border: 'none',
+              borderRadius: '16px',
+              padding: '0.3rem 0.65rem',
+              fontSize: '0.8rem',
+              fontWeight: isActive ? 700 : 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: isActive ? '0 2px 6px rgba(255, 71, 87, 0.4)' : 'none',
+              outline: 'none',
+            }}
+          >
+            {lang.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
