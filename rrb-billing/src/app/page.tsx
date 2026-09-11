@@ -15,42 +15,60 @@ export default function Home() {
           align-items: center;
           justify-content: center;
           min-height: 100vh;
+          min-height: 100dvh;
           text-align: center;
-          padding: 2rem;
+          padding: 1.5rem 1rem;
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: hidden;
+          box-sizing: border-box;
           background: linear-gradient(135deg, var(--bg-color) 0%, #1a1a2e 100%);
         }
         .hero {
           background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(20px);
-          padding: 4rem;
+          -webkit-backdrop-filter: blur(20px);
+          padding: 3rem 2rem;
           border-radius: var(--radius-lg);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          max-width: 600px;
+          width: 100%;
+          max-width: 560px;
+          box-sizing: border-box;
           animation: slideUp 0.8s ease-out forwards;
         }
         .hero h1 {
-          font-size: 3rem;
+          font-size: clamp(1.75rem, 5.5vw, 3rem);
+          line-height: 1.25;
           margin-bottom: 1rem;
           background: linear-gradient(to right, #fff, var(--accent-color));
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
+          word-break: break-word;
         }
         .hero p {
           color: var(--text-secondary);
-          font-size: 1.2rem;
+          font-size: clamp(0.95rem, 3.5vw, 1.2rem);
           margin-bottom: 2rem;
+          line-height: 1.4;
         }
         .action-links {
           display: flex;
-          gap: 1.5rem;
+          flex-wrap: wrap;
+          gap: 1rem;
           justify-content: center;
+          width: 100%;
         }
         .link-btn {
-          padding: 1rem 2rem;
+          padding: 0.85rem 1.75rem;
           border-radius: var(--radius-md);
           font-weight: 600;
           text-decoration: none;
           transition: all 0.2s;
+          font-size: 1rem;
+          box-sizing: border-box;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
         .link-btn.primary {
           background: var(--accent-color);
@@ -72,6 +90,23 @@ export default function Home() {
         @keyframes slideUp {
           from { opacity: 0; transform: translateY(40px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 600px) {
+          .landing-container {
+            padding: 1rem 0.75rem;
+          }
+          .hero {
+            padding: 2rem 1.25rem;
+            border-radius: 12px;
+          }
+          .action-links {
+            flex-direction: column;
+            gap: 0.75rem;
+          }
+          .link-btn {
+            width: 100%;
+            padding: 0.9rem 1.25rem;
+          }
         }
       `}</style>
       

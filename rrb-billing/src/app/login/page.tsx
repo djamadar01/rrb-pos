@@ -109,6 +109,19 @@ export default function LoginPage() {
           from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @media (max-width: 480px) {
+          .login-container {
+            padding: 1rem 0.75rem;
+          }
+          .login-box {
+            padding: 2rem 1.25rem;
+            border-radius: var(--radius-md);
+          }
+          .login-box h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1.75rem;
+          }
+        }
       `}</style>
 
       <div className="login-box">
